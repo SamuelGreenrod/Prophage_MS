@@ -39,7 +39,8 @@ library("patchwork")
 library("ggvenn")
 library("pheatmap")
 library("Polychrome")
-library(tidyr)
+library("tidyr")
+library("ggtext")
 
 ### Code for analysis ###
 
@@ -440,9 +441,9 @@ rssc_tree_rooted_dropped_fig_collapsed_highlighted <- rssc_tree_rooted_dropped_f
   geom_hilight(node=258, fill="orange", alpha=.3, extend=1)
 
 
-prophage_presence_matrix <- read.csv("R_pickettii_tree_presence_absence_matrix_validated_intact_prophages.csv")
+prophage_presence_matrix <- read.csv("R_pickettii_tree_presence_absence_matrix_validated_intact_prophages.csv",fileEncoding="UTF-8-BOM")
 prophage_presence_matrix2 <- prophage_presence_matrix[, -1];
-row.names(prophage_presence_matrix2) <- prophage_presence_matrix$?..Isolate
+row.names(prophage_presence_matrix2) <- prophage_presence_matrix$Isolate
 prophage_presence_matrix3 <- as.matrix(prophage_presence_matrix2)
 prophage_presence_matrix3_melted <- melt(prophage_presence_matrix3)
 
@@ -480,9 +481,9 @@ rssc_tree_rooted_dropped_fig <- ggtree(rooted.tree_reduced,layout = "rectangular
   theme(plot.margin=margin(0,0,0,0)) + ylab("RSSC phylogeny")+
   theme(axis.title=element_text(size=12,face="bold"))
 
-incomplete_prophage_presence_matrix <- read.csv("R_pickettii_tree_presence_absence_matrix_incomplete_prophages.csv")
+incomplete_prophage_presence_matrix <- read.csv("R_pickettii_tree_presence_absence_matrix_incomplete_prophages.csv",fileEncoding="UTF-8-BOM")
 incomplete_prophage_presence_matrix2 <- incomplete_prophage_presence_matrix[, -1];
-row.names(incomplete_prophage_presence_matrix2) <- incomplete_prophage_presence_matrix$?..Isolate
+row.names(incomplete_prophage_presence_matrix2) <- incomplete_prophage_presence_matrix$Isolate
 incomplete_prophage_presence_matrix3 <- as.matrix(incomplete_prophage_presence_matrix2)
 incomplete_prophage_presence_matrix3 <- melt(incomplete_prophage_presence_matrix3)
 
@@ -547,7 +548,6 @@ FigS9A <- ggplot(data=BC_and_mash, aes(x = Phylotype, y= BC))  +
   theme(axis.text.x = element_text(angle = 45, hjust = 1)) + 
   labs(fill="Completeness")+ 
   theme(legend.title = element_text(color = "black", size = 10,face="bold"))
-                                                                                                                                                                                                                                                                                                                                                                                                                                            legend.text = element_text(color = "black",size=10,face="bold"))                                                                                                                                                                                                                                                                                                                                                                                
 
 FigS9B <- ggplot(data=BC_and_mash, aes(x = Phylotype, y= Mash))  + geom_violin(alpha=0.5, position = position_dodge(width = .75),size=1,color=NA)+
   geom_boxplot(notch = FALSE,  outlier.size = -1, color="black",lwd=1, alpha = 0.7,show.legend = F, varwidth=TRUE,position = position_dodge(width = .75))+
@@ -572,35 +572,39 @@ kruskalmc(BC_and_mash$BC~BC_and_mash$Phylotype,probs=0.05)
 phyloI_presence_matrix <- read.csv("PhyloI_presenceabsence.csv",fileEncoding="UTF-8-BOM")
 rownames(phyloI_presence_matrix) <- phyloI_presence_matrix[, 1];
 phyloI_presence_matrix2 <- phyloI_presence_matrix[, -1];
-mat <- as.matrix(phyloI_presence_matrix2)
-x <- vegdist(mat, method="bray")
-x[is.na(x)] <- 0
-PhyloI_BC <- as.matrix(x)
-write.csv(PhyloI_BC, "PhyloI_BCmatrix.csv")
+phyloI_presence_matrix3 <- as.matrix(phyloI_presence_matrix2)
+
+phyloI_bc <- vegdist(phyloI_presence_matrix3, method="bray")
+phyloI_bc[is.na(phyloI_bc)] <- 0
+phyloI_bc_matrix <- as.matrix(phyloI_bc)
+write.csv(phyloI_bc_matrix, "PhyloI_BCmatrix.csv")
 
 
-matrix <- read.csv("PhyloIIA_presenceabsence.csv")
-rownames(matrix) <- matrix[, 1];
-matrix2 <- matrix[, -1];
-mat <- as.matrix(matrix2)
-x <- vegdist(mat, method="bray")
-x[is.na(x)] <- 0
-PhyloIIA_BC <- as.matrix(x)
+phyloIIA_presence_matrix <- read.csv("PhyloIIA_presenceabsence.csv")
+rownames(phyloIIA_presence_matrix) <- phyloIIA_presence_matrix[, 1];
+phyloIIA_presence_matrix2 <- phyloIIA_presence_matrix[, -1];
+phyloIIA_presence_matrix3 <- as.matrix(phyloIIA_presence_matrix2)
+
+phyloIIA_bc <- vegdist(phyloIIA_presence_matrix3, method="bray")
+phyloIIA_bc[is.na(phyloIIA_bc)] <- 0
+phyloIIA_bc_matrix <- as.matrix(phyloIIA_bc)
 write.csv(PhyloIIA_BC, "PhyloIIA_BCmatrix.csv")
 
 
-matrix <- read.csv("PhyloIIB_presenceabsence.csv")
-rownames(matrix) <- matrix[, 1];
-matrix2 <- matrix[, -1];
-mat <- as.matrix(matrix2)
-x <- vegdist(mat, method="bray")
-x[is.na(x)] <- 0
-PhyloIIB_BC <- as.matrix(x)
+phyloIIB_presence_matrix <- read.csv("PhyloIIB_presenceabsence.csv")
+rownames(phyloIIB_presence_matrix) <- phyloIIB_presence_matrix[, 1];
+phyloIIB_presence_matrix2 <- phyloIIB_presence_matrix[, -1];
+phyloIIB_presence_matrix3 <- as.matrix(phyloIIB_presence_matrix2)
+
+phyloIIB_bc <- vegdist(phyloIIB_presence_matrix3, method="bray")
+phyloIIB_bc[is.na(phyloIIB_bc)] <- 0
+phyloIIB_bc_matrix <- as.matrix(phyloIIB_bc)
 write.csv(PhyloIIB_BC, "PhyloIIB_BCmatrix.csv")
 
+
 # Take averages of each row and add to spreadsheet with host mash distances
-reg <- read.csv("Phylotype_BC_mash_regression.csv")
-lm2 <- lme(BC ~ log(Mash),data=reg, random=~1|Phylotype)
+bc_mash_regression <- read.csv("Phylotype_BC_mash_regression.csv")
+lm2 <- lme(BC ~ log(Mash),data=bc_mash_regression, random=~1|Phylotype)
 
 coef(lm2)
 par(mfrow=c(2,2))
@@ -610,16 +614,9 @@ qqline(lm2$residuals)
 plot(lm2$fitted,lm2$residuals)
 summary(lm2)
 anova(lm2)
-
-library("piecewiseSEM")
-install.packages("glue")
-detach("glue", unload=TRUE,character.only=TRUE)
 rsquared(lm2)
 
-my_y_title <- expression(paste("Average ", italic("R. solanacearum"), " dissimilarity (log",[10]")"))
-
-library("ggtext")
-ggplot(reg,aes(x=log(Mash),y=BC))+ 
+ggplot(bc_mash_regression,aes(x=log(Mash),y=BC))+ 
   geom_point(aes(fill=Phylotype),colour="black",pch=21, size=3)+
   xlim(c(-6.5,-3.5))+ylim(c(0.125,1))+
   labs(y="Average prophage dissimilarity",x="Average <i>R. solanacearum</i> dissimilarity (log<sub>10</sub>)")+
@@ -629,42 +626,37 @@ ggplot(reg,aes(x=log(Mash),y=BC))+
   theme(legend.position = c(0.15,0.83))+
   theme(axis.title=element_text(size=13,face="bold"))+
   theme(legend.title = element_text(colour="black", size=16,face="bold"),legend.text = element_text(size=10))
-# + theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank())
 
 
-
-
-## Congruence figure 5C
-library(vegan)
-# Figure 5c
-## PACo analysis of phylotype I clade
+## Figure 5C
 
 # All isolate phylogeny
-tree <- read.tree("core_tree.treefile")
-rooted.tree <- midpoint.root(tree)
+rssc_tree <- read.tree("core_tree.treefile")
+rssc_tree_rooted <- midpoint.root(rssc_tree)
+
+## PACo analysis of phylotype I clade
 
 # Extract phylotype I clade
-rooted.tree.phyloI <- extract.clade(rooted.tree,209)
-rooted.tree.phyloI.drop <- drop.tip(rooted.tree.phyloI,"GMI1000")
+rssc_tree_rooted_phyloI <- extract.clade(rssc_tree_rooted,209)
+rssc_tree_rooted_phyloI_drop <- drop.tip(rssc_tree_rooted_phyloI,"GMI1000")
 
-matrix <- read.csv("PhyloI_presenceabsence.csv")
-rownames(matrix) <- matrix[, 1];
-matrix2 <- matrix[, -1];
-mat <- as.matrix(matrix2)
+phyloI_presence_matrix <- read.csv("PhyloI_presenceabsence.csv",fileEncoding="UTF-8-BOM")
+rownames(phyloI_presence_matrix) <- phyloI_presence_matrix[, 1];
+phyloI_presence_matrix2 <- phyloI_presence_matrix[, -1];
+phyloI_presence_matrix3 <- as.matrix(phyloI_presence_matrix2)
 
-x <- vegdist(mat, method="bray")
+phyloI_bc <- vegdist(phyloI_presence_matrix3, method="bray")
+phyloI_bc[is.na(phyloI_bc)] <- 0
+phyloI_bc_matrix <- as.matrix(phyloI_bc)
 
-
-PhyloI_BC <- as.matrix(x)
-PhyloI_BC[is.na(PhyloI_BC)] <- 0
-PhyloI_UPGMA <- upgma(PhyloI_BC)
+phyloI_UPGMA <- upgma(phyloI_bc_matrix)
 
 # Start running PACo
-host.D <- cophenetic(rooted.tree.phyloI.drop)
-BC.D <- cophenetic(PhyloI_UPGMA)
+host.D <- cophenetic(rssc_tree_rooted_phyloI_drop)
+BC.D <- cophenetic(phyloI_UPGMA)
 
-HP <- read.csv("PACo_binarymatrix_phyloI.csv")
-row.names(HP) <- HP$?..
+HP <- read.csv("PACo_binarymatrix_phyloI.csv",fileEncoding="UTF-8-BOM")
+row.names(HP) <- HP$X
 HP <- HP[, -1];
 HP2 <- as.matrix(HP)
 host.D <- host.D[rownames(HP2),colnames(HP2)]
@@ -678,28 +670,28 @@ D <- paco_links(D)
 res <- residuals_paco(D$proc)
 D$gof
 
+
 ## PACo analysis of phylotype IIA clade
-rooted.tree.phyloIIA <- extract.clade(rooted.tree,372)
-rooted.tree.phyloIIA.drop <- drop.tip(rooted.tree.phyloIIA,"K60")
-circ1 <- ggtree(rooted.tree.phyloIIA,layout = "rectangular",ladderize=TRUE)+ theme(plot.margin=margin(0,0,0,0))+ geom_text(aes(label=node))
-circ1
+rssc_tree_rooted_phyloIIA <- extract.clade(rssc_tree_rooted,372)
+rssc_tree_rooted_phyloIIA_drop <- drop.tip(rssc_tree_rooted_phyloIIA,"K60")
 
-matrix <- read.csv("PhyloIIA_presenceabsence.csv")
-rownames(matrix) <- matrix[, 1];
-matrix2 <- matrix[, -1];
-mat <- as.matrix(matrix2)
+phyloIIA_presence_matrix <- read.csv("PhyloIIA_presenceabsence.csv")
+rownames(phyloIIA_presence_matrix) <- phyloIIA_presence_matrix[, 1];
+phyloIIA_presence_matrix2 <- phyloIIA_presence_matrix[, -1];
+phyloIIA_presence_matrix3 <- as.matrix(phyloIIA_presence_matrix2)
 
-x <- vegdist(mat, method="bray")
-PhyloIIA_BC <- as.matrix(x)
-PhyloIIA_BC[is.na(PhyloIIA_BC)] <- 0
-PhyloIIA_UPGMA <- upgma(PhyloIIA_BC)
+phyloIIA_bc <- vegdist(phyloIIA_presence_matrix3, method="bray")
+phyloIIA_bc[is.na(phyloIIA_bc)] <- 0
+phyloIIA_bc_matrix <- as.matrix(phyloIIA_bc)
+
+phyloIIA_UPGMA <- upgma(phyloIIA_bc_matrix)
 
 # Start running PACo
-host.D <- cophenetic(rooted.tree.phyloIIA.drop)
-BC.D <- cophenetic(PhyloIIA_UPGMA)
+host.D <- cophenetic(rssc_tree_rooted_phyloIIA_drop)
+BC.D <- cophenetic(phyloIIA_UPGMA)
 
-HP <- read.csv("PACo_binarymatrix_phyloIIA.csv")
-row.names(HP) <- HP$?..
+HP <- read.csv("PACo_binarymatrix_phyloIIA.csv",fileEncoding="UTF-8-BOM")
+row.names(HP) <- HP$X
 HP <- HP[, -1];
 HP2 <- as.matrix(HP)
 host.D <- host.D[rownames(HP2),colnames(HP2)]
@@ -715,18 +707,19 @@ D$gof
 
 ## PACo analysis of phylotype IIB clade
 
-rooted.tree.phyloIIB <- extract.clade(rooted.tree,276)
-rooted.tree.phyloIIB.drop <- drop.tip(rooted.tree.phyloIIB,"UY031")
+rssc_tree_rooted_phyloIIB <- extract.clade(rssc_tree_rooted,276)
+rssc_tree_rooted_phyloIIB_drop <- drop.tip(rssc_tree_rooted_phyloIIB,"UY031")
 
-matrix <- read.csv("PhyloIIB_presenceabsence.csv")
-rownames(matrix) <- matrix[, 1];
-matrix2 <- matrix[, -1];
-mat <- as.matrix(matrix2)
+phyloIIB_presence_matrix <- read.csv("PhyloIIB_presenceabsence.csv")
+rownames(phyloIIB_presence_matrix) <- phyloIIB_presence_matrix[, 1];
+phyloIIB_presence_matrix2 <- phyloIIB_presence_matrix[, -1];
+phyloIIB_presence_matrix3 <- as.matrix(phyloIIB_presence_matrix2)
 
-x <- vegdist(mat, method="bray")
-PhyloIIB_BC <- as.matrix(x)
-PhyloIIB_BC[is.na(PhyloIIB_BC)] <- 0
-PhyloIIB_UPGMA <- upgma(PhyloIIB_BC)
+phyloIIB_bc <- vegdist(phyloIIB_presence_matrix3, method="bray")
+phyloIIB_bc[is.na(phyloIIB_bc)] <- 0
+phyloIIB_bc_matrix <- as.matrix(phyloIIB_bc)
+
+phyloIIB_UPGMA <- upgma(phyloIIB_bc_matrix)
 
 # Start running PACo
 host.D <- cophenetic(rooted.tree.phyloIIB.drop)
@@ -748,14 +741,10 @@ res <- residuals_paco(D$proc)
 D$gof
 
 
-
-
 #PACo analysis of all isolates together
 
-tree <- read.tree("core_tree.treefile")
-rooted.tree <- midpoint.root(tree)
 tip <- c("K60","GMI1000","UY031","CMR15","PSI07")
-rooted.tree.drop <- drop.tip(rooted.tree,tip)
+rssc_tree_rooted_dropped <- drop.tip(rssc_tree_rooted,tip)
 
 # Use presence/absence matrix with reference isolates removed
 matrix <- read.csv("R_pickettii_tree_presence_absence_matrix_forcongruence.csv")
