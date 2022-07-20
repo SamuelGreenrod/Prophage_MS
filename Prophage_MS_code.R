@@ -747,22 +747,23 @@ tip <- c("K60","GMI1000","UY031","CMR15","PSI07")
 rssc_tree_rooted_dropped <- drop.tip(rssc_tree_rooted,tip)
 
 # Use presence/absence matrix with reference isolates removed
-matrix <- read.csv("R_pickettii_tree_presence_absence_matrix_forcongruence.csv")
-rownames(matrix) <- matrix[, 1];
-matrix2 <- matrix[, -1];
-mat <- as.matrix(matrix2)
+all_presence_matrix <- read.csv("R_pickettii_tree_presence_absence_matrix_forcongruence.csv")
+rownames(all_presence_matrix) <- all_presence_matrix[, 1];
+all_presence_matrix2 <- all_presence_matrix[, -1];
+all_presence_matrix3 <- as.matrix(all_presence_matrix2)
 
-x <- vegdist(mat, method="bray")
-All_BC <- as.matrix(x)
-All_BC[is.na(All_BC)] <- 0
-AllBC_UPGMA <- upgma(All_BC)
+all_bc <- vegdist(all_presence_matrix3, method="bray")
+all_bc[is.na(all_bc)] <- 0
+all_bc_matrix <- as.matrix(all_bc)
+
+all_bc_UPGMA <- upgma(all_bc_matrix)
 
 # Start running PACo
-host.D <- cophenetic(rooted.tree.drop)
-BC.D <- cophenetic(AllBC_UPGMA)
+host.D <- cophenetic(rssc_tree_rooted_dropped)
+BC.D <- cophenetic(all_bc_UPGMA)
 
-HP <- read.csv("PACo_binarymatrix_All.csv")
-row.names(HP) <- HP$?..
+HP <- read.csv("PACo_binarymatrix_All.csv",fileEncoding="UTF-8-BOM")
+row.names(HP) <- HP$X
 HP <- HP[, -1];
 HP2 <- as.matrix(HP)
 host.D <- host.D[rownames(HP2),colnames(HP2)]
@@ -777,28 +778,20 @@ res <- residuals_paco(D$proc)
 D$gof
 
 assoc <- data.frame(pol=rownames(HP2)[which(HP2==1, arr.ind=TRUE)[,'row']], pla=colnames(HP2)[which(HP2==1, arr.ind=TRUE)[,'col']])
-weight <- (res^-2)/50
 
-# Make figure 5c tanglegram
-rooted.tree.drop2 <- rotateNodes(rooted.tree.drop,"all")
-rooted.tree.drop3 <- untangle(rooted.tree.drop2)
+# Tanglegram
+rssc_tree_rooted_dropped2 <- rotateNodes(rssc_tree_rooted_dropped,"all")
+rssc_tree_rooted_dropped3 <- untangle(rssc_tree_rooted_dropped2)
 
-AllBC_UPGMA2 <- rotateNodes(AllBC_UPGMA,"all")
-AllBC_UPGMA3 <- untangle(AllBC_UPGMA2)
-
-Figure_5C <- cophyloplot(rooted.tree.drop3, AllBC_UPGMA, assoc, show.tip.label=FALSE, use.edge.length=FALSE,
+cophyloplot(rooted.tree.drop3, AllBC_UPGMA, assoc, show.tip.label=FALSE, use.edge.length=FALSE,
                          lwd=1, col='steelblue', length.line=0, gap=0, space=70,rotate=TRUE)+coord_flip()
 
-Figure_5C
-
-Fig_5a
-Fig_5a + Fig_5b + plot_layout(ncol=2,widths=c(1,0.5))
 
 
 
 # Figure 6
 
-#VIGA results
+# VIGA results
 VIGA <- read.csv("VIGA_proportion_table.csv",fileEncoding="UTF-8-BOM")
 VIGA_long <- gather(VIGA, Annotation_hit, Annotation_freq, DNA.replication:Other, factor_key=TRUE)
 
@@ -812,7 +805,6 @@ VIGA_long$Annotation_hit <- gsub('.', ' ', VIGA_long$Annotation_hit, fixed=TRUE)
 VIGA_long$Annotation_hit <- gsub('Hypothetical protein ', '', VIGA_long$Annotation_hit, fixed=TRUE)
 
 VIGA_long$Annotation_hit <- factor(VIGA_long$Annotation_hit,levels=c("Other","Unknown function","Virulence","Bacterial stress tolerance","Membrane bound protein","Protein secretion","Cellular metabolism","Post translational modification","Protein degradation","DNA methyltransferase","RNA binding","DNA binding","DNA replication","Phage cell lysis","Phage structural protein"))
-
 
 ggplot(data=VIGA_long, aes(x=Prophage,y=Annotation_freq,fill=Annotation_hit)) +
   scale_y_continuous(labels = scales::percent, position="right")+
@@ -894,16 +886,13 @@ Phi_base <- ggplot(data = melted_matrix_phi, aes(x=Var2, y=Var1, fill=value)) +
   scale_y_discrete(limits = rev,breaks=c("AldB_(PSPTO_2673)","EadM","EntA_(VK055_1922)","hupB_(XAC1081)","lolA","lpxO","msh2","PD0928","rarA","T6SS1","Trr1","vgrG-1"),
                    labels=c("Aldehyde dehydrogenase (PHI:7788; AldB","DNA methyltransferase (PHI:8921; EadM)","2,3-dihydroxybenzoate-2,3-dehydrogenase (PHI:7485; EntA)","Histone-like DNA binding protein (PHI:8676; HupB)","Outer-membrane lipoprotein carrier protein (PHI:8855; LolA)","Acyl hydroxylase (PHI:7948; LpxO)","DNA mismatch repair protein (PHI:7207; Msh2)","Zot-like toxin (PHI:4984; PD0928)","Replication-associated recombination protein (PHI:6447; RarA)"," Type VI secretion system protein (PHI:4558; T6SS1)","Thioredoxin reductase (PHI:6470; Trr1)","Type VI secretion system protein (PHI:7092; VgrG)"))
 
+CAZy + RalstoT3E + Phi_base +plot_layout(ncol=1)
+
 Prophage_phylo <- read.csv("Prophage_phylotype_heatmap.csv",fileEncoding="UTF-8-BOM")
 Prophage_phylo$Phage_hits <- factor(Prophage_phylo$Phage_hits, levels=c("Ralstonia phage Rs551","Ralstonia phage RSM3","Unclassified B","Ralstonia phage RSS1","Ralstonia phage RSS30","Ralstonia phage RSS-TH1","Ralstonia phage PE226","Ralstonia phage phiRSA1","Ralstonia phage RsoM1USA","Ralstonia phage RSY1","Unclassified D","Ralstonia phage RS138","Unclassified G","Ralstonia phage Dina","Unclassified C","Unclassified H","Unclassified A","Unclassified F","Unclassified I","Unclassified J"))
 
 colour_phylo <- c("khaki","lightsalmon","darkorchid3","forestgreen","gray80")
-options(repr.plot.height =1)
 
-options(repr.plot.width=6, repr.plot.height=4)
-
-windows.options(height=3)
-options(repr.plot.height = 1.5)
 ggplot(data=Prophage_phylo, aes(x=Phage_hits,y=frequency(Phylotype),fill=Phylotype)) + 
   scale_y_continuous(labels = scales::percent)+
   geom_bar(position='fill',stat='identity', na.rm = FALSE)+
@@ -915,11 +904,3 @@ ggplot(data=Prophage_phylo, aes(x=Phage_hits,y=frequency(Phylotype),fill=Phyloty
   theme(axis.title=element_text(size=12,face="bold"))+
   scale_x_discrete(breaks=c("Ralstonia phage Rs551","Ralstonia phage RSM3","Unclassified B","Ralstonia phage RSS1","Ralstonia phage RSS30","Ralstonia phage RSS-TH1","Ralstonia phage PE226","Ralstonia phage phiRSA1","Ralstonia phage RsoM1USA","Ralstonia phage RSY1","Unclassified D","Ralstonia phage RS138","Unclassified G","Ralstonia phage Dina","Unclassified C","Unclassified H","Unclassified A","Unclassified F","Unclassified I","Unclassified J"),
                    labels=c(expression(paste(phi," RS551")),expression(paste(phi," RSM3")),"Unclassified B",expression(paste(phi," RSS1")),expression(paste(phi," RSS30")),expression(paste(phi," RSS-TH1")),expression(paste(phi," PE226")),expression(paste(phi," RSA1")),expression(paste(phi," RsoM1USA")),expression(paste(phi," RSY1")),"Unclassified D",expression(paste(phi," RS138")),"Unclassified G",expression(paste(phi," Dina")),"Unclassified C","Unclassified H","Unclassified A","Unclassified F","Unclassified I","Unclassified J"))+
-  theme(legend.key.size = unit(1, 'cm'), #change legend key size
-        legend.key.height = unit(1, 'cm'), #change legend key height
-        legend.key.width = unit(1, 'cm'), #change legend key width
-        legend.title = element_text(size=14), #change legend title font size
-        legend.text = element_text(size=12))
-
-
-CAZy + RalstoT3E + Phi_base +plot_layout(ncol=1)
