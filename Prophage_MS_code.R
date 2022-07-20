@@ -1,4 +1,6 @@
-# MS R script
+#### MS R script ####
+
+### Dependencies ###
 
 library("ape")
 library("Biostrings")
@@ -17,119 +19,74 @@ library("treeio")
 source("functions/summarySE.R")
 library("ggbeeswarm")
 library("reshape2")
-library(gridExtra)
-library(nlme)
+library("gridExtra")
+library("nlme")
 library("biobase")
-library(piecewiseSEM)
+library("piecewiseSEM")
 library("scatterpie")
 library("maps")
-packageVersion("maps")
 library("paco")
 library("phytools")
 library("RColorBrewer")
 library("FSA")
-library(vegan)
+library("vegan")
 library("piecewiseSEM")
-library(phangorn)
-library(MASS)
-library(dplyr)
+library("phangorn")
+library("MASS")
+library("dplyr")
+library("tidyr")
+library("patchwork")
+library("ggvenn")
+library("pheatmap")
+library("Polychrome")
 library(tidyr)
-library(patchwork)
 
+### Code for analysis ###
 
-### Revisions ###
+# Figure S2
 
-# Shared prophage hit
-library("ggVennDiagram")
+prophage_mash_tree <- read.tree("Intact_prophages_validated_mashtree.dnd")
+rooted_prophage_mash_tree <- root(prophage_mash_tree, which(tree$tip.label == "Burkholderia_KS10"))
 
-Shared <- read.csv("PHASTER_vs_PHISPY_vs_virsorter2CheckV_venndiagram.csv",fileEncoding="UTF-8-BOM")
-PHASTER <- Shared$PHASTER_list
-PhiSpy <- Shared$Phispy_list
-Virsorter <- Shared$Virsorter_checkV_list
+rooted_prophage_mash_tree_figure <- ggtree(rooted.tree,layout = "rectangular")+ theme(plot.margin=margin(0,0,0,10))+ ylab("Prophage Mash distance tree")+
+  theme(axis.title=element_text(size=12,face="bold"))
 
-x <- list(
-  "PHASTER" = PHASTER, 
-  "PhiSpy" = PhiSpy, 
-  "Virsorter" = Virsorter
-)
+tip_labs <- get_taxa_name(rooted_prophage_mash_tree_figure)
+write.csv(tip_labs,"Mashtree_tiplabel.csv")
 
+phage_cornerstone_gene_matrix <- read.csv("Phage_cornerstone_genes.csv",fileEncoding="UTF-8-BOM")
 
-ggvenn(
-  x,
-  fill_color = c("#0073C2FF", "#EFC000FF", "#868686FF"),
-  stroke_size = 1, set_name_size = 7,text_size = 5
-)
+phage_cornerstone_gene_matrix_subset <- subset(phage_cornerstone_gene_matrix,select=c("Category","Phage_cell_lysis","Phage_DNA_replication_and_packaging","Phage_structural_protein"))
 
+phage_cornerstone_gene_matrix_subset2 <- phage_cornerstone_gene_matrix_subset[, -1];
 
-VennPlotData(PHASTER)
-setClass("PHASTER",PHASTER)
+row.names(phage_cornerstone_gene_matrix_subset2) <- phage_cornerstone_gene_matrix_subset$Category
 
-A <- ggVennDiagram(list(PHASTER, PhiSpy, Virsorter),category.names = c("PHASTER","PhiSpy","Virsorter2"),set_size = 5)+
-  ggplot2::scale_fill_gradient(low="grey95",high = "firebrick3")+
-  labs(fill="Prophage count")+ theme(legend.title=element_text(size=14))
-geom_sf(size = 1.2, color = "black", data = venn_setedge(data))
+phage_cornerstone_gene_matrix_subset3 <- as.matrix(phage_cornerstone_gene_matrix_subset2)
+phage_cornerstone_gene_matrix_subset_melted <- melt(phage_cornerstone_gene_matrix_subset3)
 
-ggVennDiagram(
-  list(PHASTER, PhiSpy, Virsorter), label_alpha = 0.7,
-  category.names = c("PHASTER","PhiSpy","Virsorter2"),set_size = 5)+
-  ggplot2::scale_fill_gradient(low="grey95",high = "firebrick3")+
-  geom_sf(size = 1.2, color = "black", data = venn_setedge(data))+
-  labs(fill="Prophage count")+ theme(legend.title=element_text(size=14))
+cornerstone_prophage_genes_fig <- ggplot(data = phage_cornerstone_gene_matrix_subset_melted, aes(x=Var2, y=Var1, fill=value)) + 
+  geom_tile()+ 
+  scale_y_discrete(limits = rev)+
+  theme(axis.text.y=element_blank(),axis.title.y=element_blank(),legend.position="top",axis.ticks.y=element_blank(),legend.spacing.y=unit(0.5,"cm"))+  theme(plot.margin=margin(0,0,0,20))+
+  labs(fill="Copy number")+
+  scale_fill_gradient(low="grey90",high="grey20")+
+  xlab("Prophage cornerstone gene categories")+
+  theme(legend.title = element_text(colour="black", size=12,face="bold"),legend.key=element_rect(colour="black",size=1),panel.border = element_rect(colour = "black", fill=NA))+
+  scale_x_discrete(breaks=c("Phage_cell_lysis","Phage_DNA_replication_and_packaging","Phage_structural_protein"),
+                   labels=c("Cell lysis", "DNA replication + packaging","Structural genes"))+
+  theme(axis.title=element_text(size=12,face="bold"))
 
-Shared <- read.csv("PHASTER_vs_PHISPY_vs_virsorter2CheckV_intactvenndiagram.csv",fileEncoding="UTF-8-BOM")
-PHASTER <- Shared$PHASTER_list2
-PhiSpy <- Shared$Phispy_list2
-Virsorter <- Shared$Virsorter_checkV_list2
-
-data2 <- list(PHASTER, PhiSpy, Virsorter)
-ggVennDiagram(
-  data2, label_alpha = 0.7,
-  category.names = c("PHASTER","PhiSpy","Virsorter2"),set_size = 5)+
-  ggplot2::scale_fill_gradient(low="grey95",high = "navyblue")+
-  geom_sf(size = 1.2, color = "black", data = venn_setedge(data))+
-  labs(fill="Prophage count")+ theme(legend.title=element_text(size=14))
-
-ggVennDiagram(list(PHASTER, PhiSpy, Virsorter),category.names = c("PHASTER","PhiSpy","Virsorter2"),set_size = 5)+
-  ggplot2::scale_fill_gradient(low="grey95",high = "grey40")+
-  labs(fill="Intact prophage count")+ theme(legend.title=element_text(size=14))
-geom_sf(size = 1.2, color = "black", data = venn_setedge(data))
-
-Shared <- read.csv("Intact_prophages_annoted_vs_toolcomparison_venndiagram.csv",fileEncoding="UTF-8-BOM")
-PHASTER_only <- Shared$Only_PHASTER
-More_than_one_tool <- Shared$More_than_2_tools
-Annoted <- Shared$Annotated
-
-x <- list(
-  "Only found with PHASTER" = PHASTER_only, 
-  "Found with >1 tool" = More_than_one_tool, 
-  "Taxonomic annotation" = Annoted
-)
-
-
-ggvenn(
-  x,
-  fill_color = c("#0073C2FF", "#EFC000FF", "#868686FF"),
-  stroke_size = 1, set_name_size = 7,text_size = 5
-)
-
-
-### Cornerstone phage gene content
-
-genes <- read.csv("Intact_prophage_cornerstone_phage_genecontent.csv",fileEncoding="UTF-8-BOM")
-genes_onlycategory <- select(genes,-Gene_annotation)
-
-genes_onlycategory_transpose <- t(genes_onlycategory)
-genes_long <- pivot_longer(genes_onlycategory, c(PHASTERYO002_1:PHASTERYO384_1),names_to = "Prophage label", values_to = "")
-
-
-### Figures and stats in order ###
+rooted_prophage_mash_tree_figure + cornerstone_prophage_genes_fig + plot_layout(widths = c(0.5, 0.6))
 
 # Figure 1
-stats <- read.csv("Intact_v_incomplete.csv", header=TRUE,fileEncoding="UTF-8-BOM")
-stats$Completeness <- factor(stats$Completeness, levels = c("Incomplete","Intact"))
 
-stats$GC_range <- factor(stats$GC_range, levels = c("52_to_57","57_to_59","59_to_61","61_to_63","63_to_65","65_to_67","67_to_69","More_than_69"))
-ggplot(data=stats, aes(x = GC_range, y= frequency(GC_range))) + 
+intvincl_general <- read.csv("Intact_v_incomplete.csv", header=TRUE,fileEncoding="UTF-8-BOM")
+intvincl_general$Completeness <- factor(intvincl_general$Completeness, levels = c("Incomplete","Intact"))
+
+intvincl_general$GC_range <- factor(intvincl_general$GC_range, levels = c("52_to_57","57_to_59","59_to_61","61_to_63","63_to_65","65_to_67","67_to_69","More_than_69"))
+
+Fig1A <- ggplot(data=intvincl_general, aes(x = GC_range, y= frequency(GC_range))) + 
   geom_bar(aes(fill=Completeness),stat='identity')+
   coord_cartesian(ylim = c(0, 270))+ 
   theme_bw()+ 
@@ -143,9 +100,9 @@ ggplot(data=stats, aes(x = GC_range, y= frequency(GC_range))) +
   theme(legend.position = c(0.17, 0.87))+
   theme(legend.title = element_text(colour="black", size=12,face="bold"),legend.text = element_text(size=12))
 
-stats$Length_range <- factor(stats$Length_range, levels = c("3-5","5-15","15-25","25-35","35-45","45-55","More-55"))
+intvincl_general$Length_range <- factor(intvincl_general$Length_range, levels = c("3-5","5-15","15-25","25-35","35-45","45-55","More-55"))
 
-ggplot(data=stats, aes(x = Length_range, y= frequency(Length_range))) +
+Fig1B <- ggplot(data=intvincl_general, aes(x = Length_range, y= frequency(Length_range))) +
   geom_bar(aes(fill=Completeness),stat='identity')+
   coord_cartesian(ylim = c(0, 270))+
   theme_bw()+
@@ -158,65 +115,114 @@ ggplot(data=stats, aes(x = Length_range, y= frequency(Length_range))) +
   theme(legend.position="none")+
   theme(axis.title.y = element_blank())
 
-A + B + plot_layout(guides="collect")
-b
-ggarrange(A,B,common.legend = TRUE,legend="none")
-
-incomplete_length <- subset(stats, Completeness=="Incomplete")
-
-incomplete_length$Length <- as.numeric(incomplete_length$Length)
-
-intact <- subset(stats, Completeness=="Intact")
-
-intact_length$Length <- as.numeric(intact_length$Length)
-mean(intact_length$Length)
-
-mean(incomplete_length$Length)
-hist(incomplete_length$Length)
-hist(intact_length$Length)
-var.test(incomplete_length$Length,intact_length$Length)
-wilcox.test(incomplete_length$Length,intact_length$Length,paired=FALSE)
-ggplot(aes(x=))
-
-mod <- lm()
+Fig1A + Fig1B + plot_layout(guides="collect")
 
 
-bc <- boxcox(Prophage_length_.bp. ~ Prophage_ID_Mashdist_0.1+Completeness,data=Que_incl_int_comp)
+# Figure S3
+
+# GC content and length difference between related intact and incomplete prophages
+
+intvincl_related <- read.csv("Intact_vs_incomplete_GClength_onlyphaster.csv",fileEncoding="UTF-8-BOM")
+intvincl_related$Completeness <- factor(intvincl_related$Completeness, levels = c("Intact","Incomplete"))
+intvincl_related$Taxonomic_identity <- factor(intvincl_related$Taxonomic_identity, levels = c("Ralstonia phage RSM3","Ralstonia phage phiRSA1","Ralstonia phage RsoM1USA","Ralstonia phage RSY1","Unclassified C","Unclassified D","Unclassified F"))
+
+# GC content
+
+FigS3A <- ggplot(data=intvincl_related, aes(x = Taxonomic_identity, y= GC,fill=Completeness))  + 
+  geom_violin(alpha=0.5, position = position_dodge(width = .75),size=1,color=NA)+
+  geom_boxplot(width=0.5,notch = FALSE,  outlier.size = -1, color="black",lwd=1, alpha = 0.7,show.legend = F, varwidth=FALSE,position = position_dodge(width = .75))+
+  ggbeeswarm::geom_quasirandom(shape = 21,size=2, dodge.width = .75, color="black",alpha=.5,show.legend = F)+
+  ylab("Prophage GC content (%)") +
+  xlab("Prophage group") +
+  theme_bw()+
+  geom_smooth(method = "lm")+
+  scale_fill_discrete(name = "Completeness", labels = c("Intact", "Incomplete"),drop=FALSE) +
+  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank())+
+  theme(axis.title=element_text(size=12,face="bold")) + 
+  theme(legend.title = element_text(colour="black", size=12,face="bold"),legend.text = element_text(size=12)) + 
+  theme(axis.title.x=element_blank(), axis.text.x=element_blank())+
+  labs(fill="Completeness")
+
+group_by(intvincl_related, Taxonomic_identity, Completeness) %>%
+  summarise(
+    count = n(),
+    mean = mean(GC, na.rm = TRUE),
+    sd = sd(GC, na.rm = TRUE)
+  )
+
+bc <- boxcox(GC ~ Taxonomic_identity+Completeness,data=intvincl_related)
 (lambda <- bc$x[which.max(bc$y)])
 
-Length_aov <- aov(((Prophage_length_.bp.^lambda-1)/lambda) ~ Prophage_ID_Mashdist_0.1 + Completeness, data = Que_incl_int_comp)
-summary(Length_aov)
+res.aov2 <- aov(((GC^lambda-1)/lambda) ~ Taxonomic_identity + Completeness, data = intvincl_related)
+summary(res.aov2)
 
-TukeyHSD(Length_aov, which = "Completeness")
+TukeyHSD(res.aov2, which = "Completeness")
 
 plot(res.aov2, 1)
 plot(res.aov2, 2)
 
+# Length
+
+FigS3B <- ggplot(data=intvincl_related, aes(x = Taxonomic_identity, y= Length,fill=Completeness))  + 
+  geom_violin(alpha=0.5, position = position_dodge(width = .75),size=1,color=NA)+
+  geom_boxplot(width=0.5,notch = FALSE,  outlier.size = -1, color="black",lwd=1, alpha = 0.7,show.legend = F, varwidth=FALSE,position = position_dodge(width = .75))+
+  ggbeeswarm::geom_quasirandom(shape = 21,size=2, dodge.width = .75, color="black",alpha=.5,show.legend = F)+
+  ylab("Prophage length (bp)") +
+  xlab("Prophage group") +
+  theme_bw()+
+  geom_smooth(method = "lm")+
+  scale_fill_discrete(name = "Completeness", labels = c("Intact", "Incomplete"),drop=FALSE) +
+  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank())+
+  theme(axis.title=element_text(size=12,face="bold")) + 
+  theme(legend.title = element_text(colour="black", size=12,face="bold"),legend.text = element_text(size=12)) + 
+  labs(fill="Completeness")+
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))+
+  scale_x_discrete(breaks=c("Ralstonia phage RSM3","Ralstonia phage phiRSA1","Ralstonia phage RsoM1USA","Ralstonia phage RSY1","Unclassified C","Unclassified D","Unclassified F"),
+                   labels=c(expression(paste(phi," RSM3")),expression(paste(phi," RSS1")),expression(paste(phi," RSA1")),expression(paste(phi," RsoM1USA")),expression(paste(phi," RSY1")),"Unclassified D","Unclassified C","Unclassified F"))
+
+group_by(intvincl_related, Taxonomic_identity, Completeness) %>%
+  summarise(
+    count = n(),
+    mean = mean(Length, na.rm = TRUE),
+    sd = sd(Length, na.rm = TRUE)
+  )
+
+bc <- boxcox(Length ~ Taxonomic_identity+Completeness,data=intvincl_related)
+(lambda <- bc$x[which.max(bc$y)])
+
+Length_aov <- aov(((Length^lambda-1)/lambda) ~ Taxonomic_identity + Completeness, data = intvincl_related)
+summary(Length_aov)
+
+TukeyHSD(Length_aov, which = "Completeness")
+
+plot(Length_aov, 1)
+plot(Length_aov, 2)
+
+FigS3A/FigS3B + plot_layout(guides="collect")
 
 
-### Mash matrix
+# Figure 2
 
-library(pheatmap)
+mash_matrix <- read.csv("Intact_prophage_validated_mashmatrix.csv")
+rownames(mash_matrix) <- mash_matrix[, 1];
+mash_matrix2 <- mash_matrix[, -1];
+mash_matrix3 <- as.matrix(mash_matrix2)
 
-matrix <- read.csv("Intact_prophage_validated_mashmatrix.csv")
-rownames(matrix) <- matrix[, 1];
-matrix2 <- matrix[, -1];
-mat <- as.matrix(matrix2)
-m <- pheatmap(mat, show_rownames = TRUE, show_colnames = FALSE)
-m
-k <- data.frame(rownames(mat[m$tree_row[["order"]],]))
-write.csv(k,'Intact_mash_Heatmap_order.csv')
+mash_heatmap <- pheatmap(mash_matrix3, show_rownames = TRUE, show_colnames = FALSE)
+mash_heatmap
 
+heatmap_labels <- data.frame(rownames(mash_matrix3[mash_heatmap$tree_row[["order"]],]))
+write.csv(heatmap_labels,'Intact_mash_Heatmap_order.csv')
 
-matrix <- read.csv("Intact_prophage_validated_mashmatrix.csv",fileEncoding="UTF-8-BOM")
-matrix2 <- matrix[, -1];
-row.names(matrix2) <- matrix$X
-matrix3 <- as.matrix(matrix2)
-head(matrix3)
-melted_matrix <- melt(matrix3)
-head(melted_matrix)
+mash_matrix_reordered <- read.csv("Intact_prophage_validated_mashmatrix_reorder.csv",fileEncoding="UTF-8-BOM")
+mash_matrix_reordered2 <- mash_matrix_reordered[, -1];
+row.names(mash_matrix_reordered2) <- mash_matrix_reordered$X
+mash_matrix_reordered3 <- as.matrix(mash_matrix_reordered2)
+mash_matrix_reordered3_melted <- melt(mash_matrix_reordered3)
 
-ggplot(data = melted_matrix, aes(x=Var2, y=Var1, fill=value)) + 
+head(mash_matrix_reordered3_melted)
+
+ggplot(data = mash_matrix_reordered3_melted, aes(x=Var2, y=Var1, fill=value)) + 
   geom_tile()+ 
   scale_y_discrete(limits = rev) +
   theme(axis.title.x=element_blank(),axis.ticks.x=element_blank(),axis.ticks.y=element_blank(),axis.title.y=element_blank(),axis.text.x=element_blank(), axis.text.y=element_blank())+
@@ -225,72 +231,40 @@ ggplot(data = melted_matrix, aes(x=Var2, y=Var1, fill=value)) +
   theme(legend.title = element_text(colour="black", size=13, face="bold"),panel.border = element_rect(colour = "black", fill=NA))
 
 
-
-## Mash tree
-library(patchwork)
 ### Figure 3
 
-tree <- read.tree("Intact_prophages_validated_mashtree.dnd")
-rooted.tree <- root(tree, which(tree$tip.label == "Burkholderia_KS10"))
-mashtree <- ggtree(rooted.tree,layout = "rectangular")+ theme(plot.margin=margin(0,0,0,10))+ ylab("Prophage Mash distance tree")+
-  theme(axis.title=element_text(size=12,face="bold"))
-mashtree
-mashtree <- ggtree(rooted.tree,layout = "rectangular")+ theme(plot.margin=margin(0,0,0,10))+ 
+# Mash tree
+prophage_mash_tree <- read.tree("Intact_prophages_validated_mashtree.dnd")
+rooted_prophage_mash_tree <- root(prophage_mash_tree, which(tree$tip.label == "Burkholderia_KS10"))
+
+rooted_prophage_mash_tree_fig_familylabel <- ggtree(rooted_prophage_mash_tree,layout = "rectangular")+ theme(plot.margin=margin(0,0,0,10))+ 
   geom_balance(node=478, fill="#0072B2", color=NA,alpha=.2,extendto=1.1) +
   geom_balance(node=361, fill="#009E73", color=NA,alpha=.2,extendto=1.1)+
   geom_balance(node=422, fill="#D55E00", color=NA,alpha=.2,extendto=1.1)+
   geom_balance(node=467, fill="#009E73", color=NA,alpha=.2,extendto=1.1)+
   theme(panel.border = element_rect(colour = "black", fill=NA))
 
-mashtree
+rooted_prophage_mash_tree_fig_familylabel
 
-tip_labs <- get_taxa_name(mashtree)
+tip_labs <- get_taxa_name(rooted_prophage_mash_tree_fig_familylabel)
 write.csv(tip_labs,"Mashtree_tiplabel.csv")
 
-mashtree_rev <- mashtree + coord_flip()
-mashtree_rev
-new_tree <- mashtree_rev + scale_x_reverse()
-new_tree
+rooted_prophage_mash_tree_fig_familylabel_rev <- rooted_prophage_mash_tree_fig_familylabel + coord_flip()
 
-# Phage cornerstone genes
-matrix <- read.csv("Phage_cornerstone_genes.csv",fileEncoding="UTF-8-BOM")
-matrix_subset <- subset(matrix,select=c("Category","Phage_cell_lysis","Phage_DNA_replication_and_packaging","Phage_structural_protein"))
-matrix2 <- matrix_subset[, -1];
-row.names(matrix2) <- matrix_subset$Category
-matrix3 <- as.matrix(matrix2)
-head(matrix3)
-melted_matrix <- melt(matrix3)
-head(melted_matrix)
+rooted_prophage_mash_tree_fig_familylabel_rev_inverted <- rooted_prophage_mash_tree_fig_familylabel_rev + scale_x_reverse()
 
-cornerstone <- ggplot(data = melted_matrix, aes(x=Var2, y=Var1, fill=value)) + 
-  geom_tile()+ 
-  scale_y_discrete(limits = rev)+
-  theme(axis.text.y=element_blank(),axis.title.y=element_blank(),legend.position="top",axis.ticks.y=element_blank(),legend.spacing.y=unit(0.5,"cm"))+  theme(plot.margin=margin(0,0,0,20))+
-  labs(fill="Copy number")+
-  scale_fill_gradient(low="grey90",high="grey20")+
-  xlab("Prophage cornerstone gene categories")+
-  theme(legend.title = element_text(colour="black", size=12,face="bold"),legend.key=element_rect(colour="black",size=1),panel.border = element_rect(colour = "black", fill=NA))+
-  #theme(axis.text.x = element_text(angle = 45, hjust = 1))+
-  scale_x_discrete(breaks=c("Phage_cell_lysis","Phage_DNA_replication_and_packaging","Phage_structural_protein"),
-                   labels=c("Cell lysis", "DNA replication + packaging","Structural genes"))+
-  theme(axis.title=element_text(size=12,face="bold"))
-mashtree + cornerstone + plot_layout(widths = c(0.5, 0.6))
+# Gene presence/absence and GC/length plot
 
+gene_presence_matrix <- read.csv("Intact_prophage_genepresenceabsence.csv",fileEncoding="UTF-8-BOM")
+gene_presence_matrix2 <- gene_presence_matrix[, -1];
+row.names(gene_presence_matrix2) <- gene_presence_matrix$Prophage
+gene_presence_matrix3 <- as.matrix(gene_presence_matrix2)
+gene_presence_matrix3_melted <- melt(gene_presence_matrix3)
 
-# Gene presence/absence and GC length plot
-
-matrix <- read.csv("Intact_prophage_genepresenceabsence.csv",fileEncoding="UTF-8-BOM")
-matrix2 <- matrix[, -1];
-row.names(matrix2) <- matrix$Prophage
-matrix3 <- as.matrix(matrix2)
-head(matrix3)
-melted_matrix <- melt(matrix3)
-head(melted_matrix)
-
-tmp = group_by(melted_matrix,Var1, Var2) %>% 
+tmp = group_by(gene_presence_matrix3_melted,Var1, Var2) %>% 
   summarise(., PA=as.factor(ifelse(sum(value)>0,1,0)))
 
-gene_matrix<- ggplot(data = tmp, aes(x=Var2, y=Var1, fill=PA)) + 
+gene_presence_matrix_fig <- ggplot(data = tmp, aes(x=Var2, y=Var1, fill=PA)) + 
   geom_tile()+ 
   scale_y_discrete(limits = rev)+ 
   scale_x_discrete(limits = rev)+ 
@@ -329,110 +303,15 @@ GC_heatmap <- ggplot(GC_data, aes(x = 1,y = Prophage, fill=GC)) +
   labs(fill="GC content (%)")+
   coord_flip()
 
-new_tree + gene_matrix + length_heatmap + GC_heatmap + plot_layout(heights = c(0.5,1,0.15,0.15,0.15),guides = 'collect', ncol=1)
+rooted_prophage_mash_tree_fig_familylabel_rev_inverted + gene_presence_matrix_fig + length_heatmap + GC_heatmap + plot_layout(heights = c(0.5,1,0.15,0.15,0.15),guides = 'collect', ncol=1)
 
 
-genecontent <- read.csv("Cluster_gene_content.csv",fileEncoding="UTF-8-BOM")
-gene_content_long
+#Figure S4
 
-## Intact vs incomplete GC length - FigureS2
+phylotype_prophage_number <- read.csv("Phylotype_prophage_number.csv",fileEncoding="UTF-8-BOM")
+phylotype_prophage_number_long <- gather(phylotype_prophage_number, Proph_completeness, Proph_freq, Intact:Incomplete, factor_key=TRUE)
 
-# GC content and length difference between intact, questionable, and incomplete prophages
-
-Que_incl_int_comp <- read.csv("Intact_vs_incomplete_GClength_onlyphaster.csv",fileEncoding="UTF-8-BOM")
-Que_incl_int_comp$Completeness <- factor(Que_incl_int_comp$Completeness, levels = c("Intact","Incomplete"))
-Que_incl_int_comp$Taxonomic_identity <- factor(Que_incl_int_comp$Taxonomic_identity, levels = c("Ralstonia phage RSM3","Ralstonia phage phiRSA1","Ralstonia phage RsoM1USA","Ralstonia phage RSY1","Unclassified C","Unclassified D","Unclassified F"))
-
-
-# GC content
-
-b <- ggplot(data=Que_incl_int_comp, aes(x = Taxonomic_identity, y= Length,fill=Completeness))  + 
-  geom_violin(alpha=0.5, position = position_dodge(width = .75),size=1,color=NA)+
-  geom_boxplot(width=0.5,notch = FALSE,  outlier.size = -1, color="black",lwd=1, alpha = 0.7,show.legend = F, varwidth=FALSE,position = position_dodge(width = .75))+
-  ggbeeswarm::geom_quasirandom(shape = 21,size=2, dodge.width = .75, color="black",alpha=.5,show.legend = F)+
-  ylab("Prophage length (bp)") +
-  xlab("Prophage group") +
-  theme_bw()+
-  geom_smooth(method = "lm")+
-  scale_fill_discrete(name = "Completeness", labels = c("Intact", "Incomplete"),drop=FALSE) +
-  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank())+
-  theme(axis.title=element_text(size=12,face="bold")) + 
-  theme(legend.title = element_text(colour="black", size=12,face="bold"),legend.text = element_text(size=12)) + 
-  labs(fill="Completeness")+
-  theme(axis.text.x = element_text(angle = 45, hjust = 1))+
-  scale_x_discrete(breaks=c("Ralstonia phage RSM3","Ralstonia phage phiRSA1","Ralstonia phage RsoM1USA","Ralstonia phage RSY1","Unclassified C","Unclassified D","Unclassified F"),
-                   labels=c(expression(paste(phi," RSM3")),expression(paste(phi," RSS1")),expression(paste(phi," RSA1")),expression(paste(phi," RsoM1USA")),expression(paste(phi," RSY1")),"Unclassified D","Unclassified C","Unclassified F"))
-
-
-
-group_by(Que_incl_int_comp, Taxonomic_identity, Completeness) %>%
-  summarise(
-    count = n(),
-    mean = mean(Length, na.rm = TRUE),
-    sd = sd(Length, na.rm = TRUE)
-  )
-
-bc <- boxcox(Length ~ Taxonomic_identity+Completeness,data=Que_incl_int_comp)
-(lambda <- bc$x[which.max(bc$y)])
-
-Length_aov <- aov(((Length^lambda-1)/lambda) ~ Taxonomic_identity + Completeness, data = Que_incl_int_comp)
-summary(Length_aov)
-
-TukeyHSD(Length_aov, which = "Completeness")
-
-plot(Length_aov, 1)
-plot(Length_aov, 2)
-
-
-# GC
-
-a <- ggplot(data=Que_incl_int_comp, aes(x = Taxonomic_identity, y= GC,fill=Completeness))  + 
-  geom_violin(alpha=0.5, position = position_dodge(width = .75),size=1,color=NA)+
-  geom_boxplot(width=0.5,notch = FALSE,  outlier.size = -1, color="black",lwd=1, alpha = 0.7,show.legend = F, varwidth=FALSE,position = position_dodge(width = .75))+
-  ggbeeswarm::geom_quasirandom(shape = 21,size=2, dodge.width = .75, color="black",alpha=.5,show.legend = F)+
-  ylab("Prophage GC content (%)") +
-  xlab("Prophage group") +
-  theme_bw()+
-  geom_smooth(method = "lm")+
-  scale_fill_discrete(name = "Completeness", labels = c("Intact", "Incomplete"),drop=FALSE) +
-  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank())+
-  theme(axis.title=element_text(size=12,face="bold")) + 
-  theme(legend.title = element_text(colour="black", size=12,face="bold"),legend.text = element_text(size=12)) + 
-  theme(axis.title.x=element_blank(), axis.text.x=element_blank())+
-  labs(fill="Completeness")
-
-
-group_by(Que_incl_int_comp, Taxonomic_identity, Completeness) %>%
-  summarise(
-    count = n(),
-    mean = mean(GC, na.rm = TRUE),
-    sd = sd(GC, na.rm = TRUE)
-  )
-
-
-bc <- boxcox(GC ~ Taxonomic_identity+Completeness,data=Que_incl_int_comp)
-(lambda <- bc$x[which.max(bc$y)])
-
-res.aov2 <- aov(((GC^lambda-1)/lambda) ~ Taxonomic_identity + Completeness, data = Que_incl_int_comp)
-summary(res.aov2)
-
-TukeyHSD(res.aov2, which = "Completeness")
-
-plot(res.aov2, 1)
-plot(res.aov2, 2)
-
-ggarrange(b,a,common.legend = TRUE,legend="right")
-
-a /b + plot_layout(guides="collect")
-
-
-#Figure S3
-
-# Phylotype prophage abundance figures
-Phylotype_prophage_number <- read.csv("Phylotype_prophage_number.csv",fileEncoding="UTF-8-BOM")
-Phylotype_prophage_number_long <- gather(Phylotype_prophage_number, Proph_completeness, Proph_freq, Intact:Incomplete, factor_key=TRUE)
-
-ggplot(data=Phylotype_prophage_number_long, aes(x = Phylotype, y= Proph_freq,fill=Proph_completeness))  + 
+ggplot(data=phylotype_prophage_number_long, aes(x = Phylotype, y= Proph_freq,fill=Proph_completeness))  + 
   geom_violin(alpha=0.5, position = position_dodge(width = .75),size=1,color=NA)+
   geom_boxplot(notch = FALSE,  outlier.size = -1, color="black",lwd=1, alpha = 0.7,show.legend = F, varwidth=TRUE,position = position_dodge(width = .75))+
   ggbeeswarm::geom_quasirandom(shape = 21,size=2, dodge.width = .75, color="black",alpha=.5,show.legend = F)+
@@ -446,9 +325,7 @@ ggplot(data=Phylotype_prophage_number_long, aes(x = Phylotype, y= Proph_freq,fil
   theme(legend.title = element_text(colour="black", size=12,face="bold"),legend.text = element_text(size=12)) + 
   labs(fill="Completeness")                                                                                                                                                                                                                                                                                                                                                                                
 
-
-### CHECK WITH VILLE - DIFFERENT DISTRIBUTIONS SO KW MIGHT NOT BE BEST
-intact_prophages <- Phylotype_prophage_number_long[which(Phylotype_prophage_number_long$Proph_completeness=='Intact'),]
+intact_prophages <- phylotype_prophage_number_long[which(phylotype_prophage_number_long$Proph_completeness=='Intact'),]
 
 hist(intact_prophages[which(intact_prophages$Phylotype=='I'),]$Proph_freq)
 hist(intact_prophages[which(intact_prophages$Phylotype=='IIA'),]$Proph_freq)
@@ -459,72 +336,52 @@ hist(intact_prophages[which(intact_prophages$Phylotype=='IV'),]$Proph_freq)
 kruskal.test(Proph_freq ~ Phylotype, data = intact_prophages)
 dunnTest(Proph_freq ~ Phylotype, data = intact_prophages)
 
-incomplete_prophages <- Phylotype_prophage_number_long[which(Phylotype_prophage_number_long$Proph_completeness=='Incomplete'),]
+incomplete_prophages <- phylotype_prophage_number_long[which(phylotype_prophage_number_long$Proph_completeness=='Incomplete'),]
+
+hist(incomplete_prophages[which(intact_prophages$Phylotype=='I'),]$Proph_freq)
+hist(incomplete_prophages[which(intact_prophages$Phylotype=='IIA'),]$Proph_freq)
+hist(incomplete_prophages[which(intact_prophages$Phylotype=='IIB'),]$Proph_freq)
+hist(incomplete_prophages[which(intact_prophages$Phylotype=='III'),]$Proph_freq)
+hist(incomplete_prophages[which(intact_prophages$Phylotype=='IV'),]$Proph_freq)
+
 kruskal.test(Proph_freq ~ Phylotype, data = incomplete_prophages)
 dunnTest(Proph_freq ~ Phylotype, data = incomplete_prophages)
 
-questionable_prophages <- Phylotype_prophage_number_long[which(Phylotype_prophage_number_long$Proph_completeness=='Questionable..n...73.'),]
-kruskal.test(Proph_freq ~ Phylotype, data = questionable_prophages)
-dunnTest(Proph_freq ~ Phylotype, data = questionable_prophages)
 
+# Figure S5
 
-# Figure S4
-
-tree <- read.tree("Intact_prophages_validated_ref_mashtree.dnd")
-rooted.tree <- root(tree, which(tree$tip.label == "Burkholderia_KS10"))
+prophage_mash_tree_refs <- read.tree("Intact_prophages_validated_ref_mashtree.dnd")
+prophage_mash_tree_refs_rooted <- root(prophage_mash_tree_refs, which(prophage_mash_tree_refs$tip.label == "Burkholderia_KS10"))
 
 tip_colours <- read.csv("Figure_S3_tiplabels.csv",fileEncoding="UTF-8-BOM")
 colours <- data.frame(tip_colours$Colour)
 
-mashtree <- ggtree(rooted.tree,layout = "rectangular")+ ylab("Prophage Mash distance tree")+theme(axis.title=element_text(size=12,face="bold"))+ geom_tiplab(aes(
+prophage_mash_tree_refs_labelled <- ggtree(prophage_mash_tree_refs_rooted,layout = "rectangular")+ ylab("Prophage Mash distance tree")+theme(axis.title=element_text(size=12,face="bold"))+ geom_tiplab(aes(
   subset=(grepl('Ralstonia',label,fixed=TRUE)==TRUE)),colour=colours$tip_colours.Colour, size = 4)+ ggplot2::xlim(0, 2)#geom_tiplab(colour=colours$tip_colours.Colour, size = 5) + ggplot2::xlim(0, 2)
-mashtree
 
-tip_labs <- get_taxa_name(mashtree)
+
+tip_labs <- get_taxa_name(prophage_mash_tree_refs_labelled)
 write.csv(tip_labs,"Mashtree_refs__tiplabel.csv")
 
 
+# Figure 4
 
-# World map plot
-
-#Figure 4
-
-install.packages("Polychrome")
-library(Polychrome)
-help(Polychrome)
-data(alphabet)
-names(alphabet) <- NULL
-
-
-c19 <- c("dodgerblue2", "#E31A1C", "green4", "maroon", "#FF7F00", "black", "gold1", "skyblue2", "palegreen2", "#FDBF6F", "gray70", "steelblue4", "orchid1", "darkturquoise", "khaki2", "brown","yellow4","#6A3D9A","green1")
 world <- map_data('world')
 
-p <- ggplot(world, aes(long, lat)) +
+world_map <- ggplot(world, aes(long, lat)) +
   geom_map(map=world, aes(map_id=region), fill="antiquewhite", color="black") +
   coord_quickmap()+theme(panel.background = element_rect(fill = "aliceblue"),panel.border = element_rect(colour = "black", fill=NA, size=1))+ labs(x = "Longitude") + labs(y = "Latitude") +
   theme(axis.text.y = element_text(size = 10, color = "black")) + 
   theme(axis.text.x = element_text(size = 10, color = "black")) + 
   theme(axis.title = element_text( face="bold", size=14))+theme(legend.title = element_text(color="black",size=12,face="bold"))+theme(legend.text = element_text(size=12))+labs(fill="Prophage")
 
-p
-pies <- read.csv("scatterpie_continent_moved2.csv")
-
-pal <- c("#000000","#004949","#009292","#ff6db6","#ffb6db",
-         "#490092","#006ddb","#b66dff","#b6dbff",
-         "#920000","#924900","#db6d00","#24ff24","#ffff6d")
-
-library("colorBlindness")
-nb.cols <- 14
-mycolors <- colorRampPalette(brewer.pal(12, "Paired"))(nb.cols)
+pie_charts <- read.csv("scatterpie_continent_moved2.csv")
 
 colours <- paletteMartin
 newcolours <- colours[-c(1,12)]
-newcolours
 names(newcolours) <- NULL   
 
-newcolours
-
-p + geom_scatterpie(aes(x=?..long,y=lat,group=region,r=15),data=pies,cols=c("RS551","PE226","RSM3","RSS1","RSS30","RSA1","RsoM1USA","RSY1","RS138","Dina","Unclassified.C","Unclassified.A","Unclassified.F"),alpha=.8)+ 
+world_map + geom_scatterpie(aes(x=?..long,y=lat,group=region,r=15),data=pie_charts,cols=c("RS551","PE226","RSM3","RSS1","RSS30","RSA1","RsoM1USA","RSY1","RS138","Dina","Unclassified.C","Unclassified.A","Unclassified.F"),alpha=.8)+ 
   scale_fill_manual(values = newcolours,labels=c(expression(paste(phi," RS551")),expression(paste(phi," PE226")),expression(paste(phi," RSM3")),expression(paste(phi," RSS1")),expression(paste(phi," RSS30")),expression(paste(phi," RSA1")),expression(paste(phi," RsoM1USA")),expression(paste(phi," RSY1")),expression(paste(phi," RS138")),expression(paste(phi," Dina")),"Unclassified C","Unclassified A","Unclassified F"))+ 
   annotate(geom="text", x=-10, y=-60, label="(87)",color="black",fontface="bold")+ 
   annotate(geom="text", x=180, y=5, label="(63)",color="black",fontface="bold")+ 
@@ -535,20 +392,15 @@ p + geom_scatterpie(aes(x=?..long,y=lat,group=region,r=15),data=pies,cols=c("RS5
   theme(legend.title = element_text(size = 12), legend.text = element_text(size = 10))+
   theme(legend.justification = "top") +
   theme(legend.text.align = 0)
-#scale_colour_manual(labels=c(expression(paste(phi," RS551")),expression(paste(phi," PE226")),expression(paste(phi," RSM3")),expression(paste(phi," RSS1")),expression(paste(phi," RSS30")),expression(paste(phi," RSS-TH1")),expression(paste(phi," RSA1")),expression(paste(phi," RsoM1USA")),expression(paste(phi," RSY1")),expression(paste(phi," RS138")),expression(paste(phi," Dina")),"Unclassified C","Unclassified A"))
-#theme(legend.position="right")+
-#guides(fill=guide_legend(ncol=10))
 
-## Same again but as a bar chart
+# Fig. S6
 
-library(tidyr)
-Prophage_continent_proportion <- read.csv("Continent_distributions_prophages.csv",fileEncoding="UTF-8-BOM")
-Gathered <- pivot_longer(Prophage_continent_proportion, cols=c(Africa:Oceania),names_to = "Continents",values_to="Proportion")
+prophage_continent_prophage_proportion <- read.csv("Continent_distributions_prophages.csv",fileEncoding="UTF-8-BOM")
+prophage_continent_prophage_proportion_gathered <- pivot_longer(prophage_continent_prophage_proportion, cols=c(Africa:Oceania),names_to = "Continents",values_to="Proportion")
 
-Gathered$Prophage <- factor(Gathered$Prophage,levels = c("Ralstonia phage Rs551","Ralstonia phage RSM3","Unclassified B","Ralstonia phage RSS1","Ralstonia phage RSS30","Ralstonia phage RSS-TH1","Ralstonia phage PE226","Ralstonia phage phiRSA1","Ralstonia phage RsoM1USA","Ralstonia phage RSY1","Unclassified D","Ralstonia phage RS138","Unclassified G","Ralstonia phage Dina","Unclassified C","Unclassified H","Unclassified A","Unclassified F","Unclassified I","Unclassified J"))
+prophage_continent_prophage_proportion_gathered$Prophage <- factor(prophage_continent_prophage_proportion_gathered$Prophage,levels = c("Ralstonia phage Rs551","Ralstonia phage RSM3","Unclassified B","Ralstonia phage RSS1","Ralstonia phage RSS30","Ralstonia phage RSS-TH1","Ralstonia phage PE226","Ralstonia phage phiRSA1","Ralstonia phage RsoM1USA","Ralstonia phage RSY1","Unclassified D","Ralstonia phage RS138","Unclassified G","Ralstonia phage Dina","Unclassified C","Unclassified H","Unclassified A","Unclassified F","Unclassified I","Unclassified J"))
 
-
-ggplot(data=Gathered, aes(x=Prophage,y=Proportion)) + 
+ggplot(data=prophage_continent_prophage_proportion_gathered, aes(x=Prophage,y=Proportion)) + 
   scale_y_continuous(labels = scales::percent, limits=c(0,1))+
   geom_bar(stat="identity", color="black",fill="lightblue")+
   theme_bw() +
@@ -563,51 +415,40 @@ ggplot(data=Gathered, aes(x=Prophage,y=Proportion)) +
                    labels=c(expression(paste(phi," RS551")),expression(paste(phi," PE226")),expression(paste(phi," RSM3")),expression(paste(phi," RSS1")),expression(paste(phi," RSS30")),expression(paste(phi," RSS-TH1")), "Unclassified B",expression(paste(phi," RSA1")),expression(paste(phi," RsoM1USA")),expression(paste(phi," RSY1")),"Unclassified D",expression(paste(phi," RS138")),"Unclassified G",expression(paste(phi," Dina")),"Unclassified C","Unclassified H","Unclassified A","Unclassified F","Unclassified I","Unclassified J"))
 
 
+# Figure 5A
 
-
-# Figure 5A - re-done
-
-install.packages("rlang")
-require(ggtree)
-install.packages("phytools")
-require(phytools)
-library(patchwork)
-tree <- read.tree("core_tree.treefile")
-rooted.tree <- midpoint.root(tree)
-tip_labs <- rooted.tree$tip.label
+rssc_tree <- read.tree("core_tree.treefile")
+rssc_tree_rooted <- midpoint.root(rssc_tree)
+tip_labs <- rssc_tree_rooted$tip.label
 
 to_drop <- c("UY031","K60","GMI1000","CMR15","PSI07")
-rooted.tree_reduced <- drop.tip(rooted.tree,to_drop)
+rssc_tree_rooted_dropped <- drop.tip(rssc_tree_rooted,to_drop)
 
-ggtree(rooted.tree_reduced,layout = "rectangular",ladderize=TRUE)+ geom_text(aes(label=node), hjust=-.3)
-
-tree_fig <- ggtree(rooted.tree_reduced,layout = "rectangular",ladderize=TRUE)+ 
+rssc_tree_rooted_dropped_fig <- ggtree(rooted.tree_reduced,layout = "rectangular",ladderize=TRUE)+ 
   theme(plot.margin=margin(0,0,0,0)) + ylab("RSSC phylogeny")+
   theme(axis.title=element_text(size=12,face="bold"))
 
-tree_fig_collapse <- tree_fig %>%
+rssc_tree_rooted_dropped_fig_collapsed <- rssc_tree_rooted_dropped_fig %>%
   collapse(node=201,"max")%>%
   collapse(node=265,"max")
 
-tree_fig_collapse_colour <- tree_fig_collapse %>%
+rssc_tree_rooted_dropped_fig_collapsed_highlighted <- rssc_tree_rooted_dropped_fig_collapsed %>%
   + geom_hilight(node=268, fill="steelblue", alpha=.3, extend=1) +
   geom_hilight(node=363, fill="darkgreen", alpha=.3, extend=1)+
   geom_hilight(node=203, fill="yellow", alpha=.3, extend=1)+
   geom_hilight(node=196, fill="red", alpha=.3, extend=1)+
   geom_hilight(node=258, fill="orange", alpha=.3, extend=1)
-tree_fig_collapse_colour
-
-matrix <- read.csv("R_pickettii_tree_presence_absence_matrix_validated_intact_prophages.csv")
-matrix2 <- matrix[, -1];
-row.names(matrix2) <- matrix$?..Isolate
-matrix3 <- as.matrix(matrix2)
-head(matrix3)
-melted_matrix <- melt(matrix3)
-head(melted_matrix)
-melted_matrix$value <- as.factor(melted_matrix$value)
 
 
-All_intact_phylogeny <- ggplot(data = melted_matrix, aes(x=Var2, y=Var1, fill=value)) + 
+prophage_presence_matrix <- read.csv("R_pickettii_tree_presence_absence_matrix_validated_intact_prophages.csv")
+prophage_presence_matrix2 <- prophage_presence_matrix[, -1];
+row.names(prophage_presence_matrix2) <- prophage_presence_matrix$?..Isolate
+prophage_presence_matrix3 <- as.matrix(prophage_presence_matrix2)
+prophage_presence_matrix3_melted <- melt(prophage_presence_matrix3)
+
+prophage_presence_matrix3_melted$value <- as.factor(prophage_presence_matrix3_melted$value)
+
+prophage_presence_fig <- ggplot(data = melted_matrix, aes(x=Var2, y=Var1, fill=value)) + 
   geom_tile()+ 
   scale_y_discrete(limits = rev)+
   theme(axis.text.y=element_blank(),axis.title.y=element_blank(),axis.ticks.y=element_blank(),legend.spacing.y=unit(0.5,"cm"))+
@@ -623,34 +464,30 @@ All_intact_phylogeny <- ggplot(data = melted_matrix, aes(x=Var2, y=Var1, fill=va
   theme(legend.justification = "top")
 
 
-Fig_5a <- tree_fig + All_intact_phylogeny + plot_layout(widths = c(0.4, 1))+plot_layout(guides="collect")
+rssc_tree_rooted_dropped_fig_collapsed_highlighted + prophage_presence_fig + plot_layout(widths = c(0.4, 1))+plot_layout(guides="collect")
 
 
-#Figure 5 supplementary incomplete
+#Figure S7
 
-tree <- read.tree("core_tree.treefile")
-rooted.tree <- midpoint.root(tree)
-tip_labs <- rooted.tree$tip.label
+rssc_tree <- read.tree("core_tree.treefile")
+rssc_tree_rooted <- midpoint.root(rssc_tree)
+tip_labs <- rssc_tree_rooted$tip.label
 
 to_drop <- c("UY031","K60","GMI1000","CMR15","PSI07")
-rooted.tree_reduced <- drop.tip(rooted.tree,to_drop)
+rssc_tree_rooted_dropped <- drop.tip(rssc_tree_rooted,to_drop)
 
-tree_fig <- ggtree(rooted.tree_reduced,layout = "rectangular",ladderize=TRUE)+ 
+rssc_tree_rooted_dropped_fig <- ggtree(rooted.tree_reduced,layout = "rectangular",ladderize=TRUE)+ 
   theme(plot.margin=margin(0,0,0,0)) + ylab("RSSC phylogeny")+
   theme(axis.title=element_text(size=12,face="bold"))
 
-
-matrix <- read.csv("R_pickettii_tree_presence_absence_matrix_incomplete_prophages.csv")
-matrix2 <- matrix[, -1];
-row.names(matrix2) <- matrix$?..Isolate
-matrix3 <- as.matrix(matrix2)
-head(matrix3)
-melted_matrix <- melt(matrix3)
-head(melted_matrix)
-melted_matrix$value <- as.factor(melted_matrix$value)
+incomplete_prophage_presence_matrix <- read.csv("R_pickettii_tree_presence_absence_matrix_incomplete_prophages.csv")
+incomplete_prophage_presence_matrix2 <- incomplete_prophage_presence_matrix[, -1];
+row.names(incomplete_prophage_presence_matrix2) <- incomplete_prophage_presence_matrix$?..Isolate
+incomplete_prophage_presence_matrix3 <- as.matrix(incomplete_prophage_presence_matrix2)
+incomplete_prophage_presence_matrix3 <- melt(incomplete_prophage_presence_matrix3)
 
 
-All_intact_phylogeny <- ggplot(data = melted_matrix, aes(x=Var2, y=Var1, fill=value)) + 
+incomplete_prophage_presence_fig <- ggplot(data = incomplete_prophage_presence_matrix3, aes(x=Var2, y=Var1, fill=value)) + 
   geom_tile()+ 
   scale_y_discrete(limits = rev)+
   theme(axis.text.y=element_blank(),axis.title.y=element_blank(),axis.ticks.y=element_blank(),legend.spacing.y=unit(0.5,"cm"))+
@@ -666,22 +503,22 @@ All_intact_phylogeny <- ggplot(data = melted_matrix, aes(x=Var2, y=Var1, fill=va
   theme(legend.justification = "top")
 
 
-tree_fig + All_intact_phylogeny + plot_layout(widths = c(0.4, 1),guides="collect")
+rssc_tree_rooted_dropped_fig + incomplete_prophage_presence_fig + plot_layout(widths = c(0.4, 1),guides="collect")
 
 
-## Figure_5 supplementary figure - Figure S7
+## Figure S8
 
-Prophage_phylotype_proportion <- read.csv("Phylotype_distributions_prophages_dividephylotypeabundance.csv",fileEncoding="UTF-8-BOM")
-Gathered <- pivot_longer(Prophage_phylotype_proportion, cols=c(I:IV),names_to = "Phylotypes",values_to="Proportion")
+prophage_phylotype_proportion <- read.csv("Phylotype_distributions_prophages_dividephylotypeabundance.csv",fileEncoding="UTF-8-BOM")
+prophage_phylotype_proportion_gathered <- pivot_longer(prophage_phylotype_proportion, cols=c(I:IV),names_to = "Phylotypes",values_to="Proportion")
 
-Gathered$Prophage <- factor(Gathered$Prophage,levels = c("Ralstonia phage Rs551","Ralstonia phage RSM3","Unclassified B","Ralstonia phage RSS1","Ralstonia phage RSS30","Ralstonia phage RSS-TH1","Ralstonia phage PE226","Ralstonia phage phiRSA1","Ralstonia phage RsoM1USA","Ralstonia phage RSY1","Unclassified D","Ralstonia phage RS138","Unclassified G","Ralstonia phage Dina","Unclassified C","Unclassified H","Unclassified A","Unclassified F","Unclassified I","Unclassified J"))
+prophage_phylotype_proportion_gathered$Prophage <- factor(prophage_phylotype_proportion_gathered$Prophage,levels = c("Ralstonia phage Rs551","Ralstonia phage RSM3","Unclassified B","Ralstonia phage RSS1","Ralstonia phage RSS30","Ralstonia phage RSS-TH1","Ralstonia phage PE226","Ralstonia phage phiRSA1","Ralstonia phage RsoM1USA","Ralstonia phage RSY1","Unclassified D","Ralstonia phage RS138","Unclassified G","Ralstonia phage Dina","Unclassified C","Unclassified H","Unclassified A","Unclassified F","Unclassified I","Unclassified J"))
 
-cols <- c("#66CC33","#CCFFFF","#FF9900","#CC0000","#003399","#663300","#FFFF00","#660066","#006600","#999999")
+colours <- c("#66CC33","#CCFFFF","#FF9900","#CC0000","#003399","#663300","#FFFF00","#660066","#006600","#999999")
 
-ggplot(data=Gathered, aes(x=Prophage,y=Proportion,fill=Cluster)) + 
+ggplot(data=prophage_phylotype_proportion_gathered, aes(x=Prophage,y=Proportion,fill=Cluster)) + 
   scale_y_continuous(labels = scales::percent, limits=c(0,1))+
   geom_bar(stat="identity", color="black")+
-  scale_fill_manual(values=cols)+
+  scale_fill_manual(values=colours)+
   theme_bw() +
   theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank())+ 
   ylab("Percent of isolates containing prophage (%)") +
@@ -694,23 +531,31 @@ ggplot(data=Gathered, aes(x=Prophage,y=Proportion,fill=Cluster)) +
   scale_x_discrete(breaks=c("Ralstonia phage Rs551","Ralstonia phage RSM3","Unclassified B","Ralstonia phage RSS1","Ralstonia phage RSS30","Ralstonia phage RSS-TH1","Ralstonia phage PE226","Ralstonia phage phiRSA1","Ralstonia phage RsoM1USA","Ralstonia phage RSY1","Unclassified D","Ralstonia phage RS138","Unclassified G","Ralstonia phage Dina","Unclassified C","Unclassified H","Unclassified A","Unclassified F","Unclassified I","Unclassified J"),
                    labels=c(expression(paste(phi," RS551")),expression(paste(phi," RSM3")),"Unclassified B",expression(paste(phi," RSS1")),expression(paste(phi," RSS30")),expression(paste(phi," RSS-TH1")),expression(paste(phi," PE226")),expression(paste(phi," RSA1")),expression(paste(phi," RsoM1USA")),expression(paste(phi," RSY1")),"Unclassified D",expression(paste(phi," RS138")),"Unclassified G",expression(paste(phi," Dina")),"Unclassified C","Unclassified H","Unclassified A","Unclassified F","Unclassified I","Unclassified J"))
 
-#Figure_S8
+
+#Figure_S9
 
 BC_and_mash <- read.csv("Phylotype_BC_mash_regression.csv")
 
-ggplot(data=BC_and_mash, aes(x = Phylotype, y= BC))  + geom_violin(alpha=0.5, position = position_dodge(width = .75),size=1,color=NA)+
+FigS9A <- ggplot(data=BC_and_mash, aes(x = Phylotype, y= BC))  +
+  geom_violin(alpha=0.5, position = position_dodge(width = .75),size=1,color=NA)+
   geom_boxplot(notch = FALSE,  outlier.size = -1, color="black",lwd=1, alpha = 0.7,show.legend = F, varwidth=TRUE,position = position_dodge(width = .75))+
-  # geom_point( shape = 21,size=2, position = position_jitterdodge(), color="black",alpha=1)+
-  ggbeeswarm::geom_quasirandom(shape = 21,size=2, dodge.width = .75, color="black",alpha=.5,show.legend = F)+ylab("Average prophage diversity") + xlab("Phylotype") + theme_bw()+ geom_smooth(method = "lm")+ theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank())+theme(axis.title=element_text(size=12,face="bold"))+theme(axis.text.x = element_text(angle = 45, hjust = 1)) + labs(fill="Completeness")+ theme(legend.title = element_text(color = "black", size = 10,face="bold"),
+  ggbeeswarm::geom_quasirandom(shape = 21,size=2, dodge.width = .75, color="black",alpha=.5,show.legend = F)+ylab("Average prophage diversity") + 
+  xlab("Phylotype") + 
+  theme_bw()+ 
+  geom_smooth(method = "lm")+
+  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank())+theme(axis.title=element_text(size=12,face="bold"))+
+  theme(axis.text.x = element_text(angle = 45, hjust = 1)) + 
+  labs(fill="Completeness")+ 
+  theme(legend.title = element_text(color = "black", size = 10,face="bold"))
                                                                                                                                                                                                                                                                                                                                                                                                                                             legend.text = element_text(color = "black",size=10,face="bold"))                                                                                                                                                                                                                                                                                                                                                                                
 
-ggplot(data=BC_and_mash, aes(x = Phylotype, y= Mash))  + geom_violin(alpha=0.5, position = position_dodge(width = .75),size=1,color=NA)+
+FigS9B <- ggplot(data=BC_and_mash, aes(x = Phylotype, y= Mash))  + geom_violin(alpha=0.5, position = position_dodge(width = .75),size=1,color=NA)+
   geom_boxplot(notch = FALSE,  outlier.size = -1, color="black",lwd=1, alpha = 0.7,show.legend = F, varwidth=TRUE,position = position_dodge(width = .75))+
   # geom_point( shape = 21,size=2, position = position_jitterdodge(), color="black",alpha=1)+
   ggbeeswarm::geom_quasirandom(shape = 21,size=2, dodge.width = .75, color="black",alpha=.5,show.legend = F)+ylab("Average host diversity") + xlab("Phylotype") + theme_bw()+ geom_smooth(method = "lm")+ theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank())+theme(axis.title=element_text(size=12,face="bold"))+theme(axis.text.x = element_text(angle = 45, hjust = 1)) + labs(fill="Completeness")  + theme(legend.title = element_text(color = "black", size = 10,face="bold"),
                                                                                                                                                                                                                                                                                                                                                                                                                                           legend.text = element_text(color = "black",size=10,face="bold"))                                                                                                                                                                                                                                                                                                                                                                              
 
-ggarrange(a,b)
+FigS9A + FigS9B
 
 kruskal.test(BC_and_mash$Mash~BC_and_mash$Phylotype)
 dunnTest(BC_and_mash$Mash~BC_and_mash$Phylotype)
@@ -720,13 +565,14 @@ kruskal.test(BC_and_mash$BC~BC_and_mash$Phylotype)
 dunnTest(BC_and_mash$BC~BC_and_mash$Phylotype)
 kruskalmc(BC_and_mash$BC~BC_and_mash$Phylotype,probs=0.05)
 
-# Figure 5b
+
+# Figure 5B
 
 # Make Bray-Curtis distance matrices
-matrix <- read.csv("PhyloI_presenceabsence.csv",fileEncoding="UTF-8-BOM")
-rownames(matrix) <- matrix[, 1];
-matrix2 <- matrix[, -1];
-mat <- as.matrix(matrix2)
+phyloI_presence_matrix <- read.csv("PhyloI_presenceabsence.csv",fileEncoding="UTF-8-BOM")
+rownames(phyloI_presence_matrix) <- phyloI_presence_matrix[, 1];
+phyloI_presence_matrix2 <- phyloI_presence_matrix[, -1];
+mat <- as.matrix(phyloI_presence_matrix2)
 x <- vegdist(mat, method="bray")
 x[is.na(x)] <- 0
 PhyloI_BC <- as.matrix(x)
