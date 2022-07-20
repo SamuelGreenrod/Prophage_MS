@@ -1,4 +1,8 @@
-#### MS R script ####
+#### Prophage MS figure and stat R script ####
+
+# The paper this R code was written for can be accessed at: 
+# Greenrod STE, Stoycheva M, Elphinstone J, Friman VP. 2021. Global diversity and distribution of prophages are lineage-specific within the Ralstonia solanacearum plant pathogenic bacterium species complex. bioRxiv. DOI: 10.1101/2021.10.20.465097
+
 
 ### Dependencies ###
 
@@ -16,7 +20,6 @@ library("datarium")
 library("rstatix")
 library("tidyverse")
 library("treeio")
-source("functions/summarySE.R")
 library("ggbeeswarm")
 library("reshape2")
 library("gridExtra")
@@ -39,12 +42,11 @@ library("patchwork")
 library("ggvenn")
 library("pheatmap")
 library("Polychrome")
-library("tidyr")
 library("ggtext")
 
 ### Code for analysis ###
 
-# Figure S2
+## Figure S2
 
 prophage_mash_tree <- read.tree("Intact_prophages_validated_mashtree.dnd")
 rooted_prophage_mash_tree <- root(prophage_mash_tree, which(tree$tip.label == "Burkholderia_KS10"))
@@ -80,12 +82,15 @@ cornerstone_prophage_genes_fig <- ggplot(data = phage_cornerstone_gene_matrix_su
 
 rooted_prophage_mash_tree_figure + cornerstone_prophage_genes_fig + plot_layout(widths = c(0.5, 0.6))
 
-# Figure 1
+
+## Figure 1
 
 intvincl_general <- read.csv("Intact_v_incomplete.csv", header=TRUE,fileEncoding="UTF-8-BOM")
 intvincl_general$Completeness <- factor(intvincl_general$Completeness, levels = c("Incomplete","Intact"))
 
 intvincl_general$GC_range <- factor(intvincl_general$GC_range, levels = c("52_to_57","57_to_59","59_to_61","61_to_63","63_to_65","65_to_67","67_to_69","More_than_69"))
+
+# GC distruibution figure
 
 Fig1A <- ggplot(data=intvincl_general, aes(x = GC_range, y= frequency(GC_range))) + 
   geom_bar(aes(fill=Completeness),stat='identity')+
@@ -103,6 +108,7 @@ Fig1A <- ggplot(data=intvincl_general, aes(x = GC_range, y= frequency(GC_range))
 
 intvincl_general$Length_range <- factor(intvincl_general$Length_range, levels = c("3-5","5-15","15-25","25-35","35-45","45-55","More-55"))
 
+# Length distribution figure
 Fig1B <- ggplot(data=intvincl_general, aes(x = Length_range, y= frequency(Length_range))) +
   geom_bar(aes(fill=Completeness),stat='identity')+
   coord_cartesian(ylim = c(0, 270))+
@@ -127,7 +133,7 @@ intvincl_related <- read.csv("Intact_vs_incomplete_GClength_onlyphaster.csv",fil
 intvincl_related$Completeness <- factor(intvincl_related$Completeness, levels = c("Intact","Incomplete"))
 intvincl_related$Taxonomic_identity <- factor(intvincl_related$Taxonomic_identity, levels = c("Ralstonia phage RSM3","Ralstonia phage phiRSA1","Ralstonia phage RsoM1USA","Ralstonia phage RSY1","Unclassified C","Unclassified D","Unclassified F"))
 
-# GC content
+# GC content figure
 
 FigS3A <- ggplot(data=intvincl_related, aes(x = Taxonomic_identity, y= GC,fill=Completeness))  + 
   geom_violin(alpha=0.5, position = position_dodge(width = .75),size=1,color=NA)+
@@ -143,6 +149,8 @@ FigS3A <- ggplot(data=intvincl_related, aes(x = Taxonomic_identity, y= GC,fill=C
   theme(legend.title = element_text(colour="black", size=12,face="bold"),legend.text = element_text(size=12)) + 
   theme(axis.title.x=element_blank(), axis.text.x=element_blank())+
   labs(fill="Completeness")
+
+# Stats on GC differences between intact and incomplete prophages
 
 group_by(intvincl_related, Taxonomic_identity, Completeness) %>%
   summarise(
@@ -162,7 +170,7 @@ TukeyHSD(res.aov2, which = "Completeness")
 plot(res.aov2, 1)
 plot(res.aov2, 2)
 
-# Length
+# Length figure
 
 FigS3B <- ggplot(data=intvincl_related, aes(x = Taxonomic_identity, y= Length,fill=Completeness))  + 
   geom_violin(alpha=0.5, position = position_dodge(width = .75),size=1,color=NA)+
@@ -180,6 +188,8 @@ FigS3B <- ggplot(data=intvincl_related, aes(x = Taxonomic_identity, y= Length,fi
   theme(axis.text.x = element_text(angle = 45, hjust = 1))+
   scale_x_discrete(breaks=c("Ralstonia phage RSM3","Ralstonia phage phiRSA1","Ralstonia phage RsoM1USA","Ralstonia phage RSY1","Unclassified C","Unclassified D","Unclassified F"),
                    labels=c(expression(paste(phi," RSM3")),expression(paste(phi," RSS1")),expression(paste(phi," RSA1")),expression(paste(phi," RsoM1USA")),expression(paste(phi," RSY1")),"Unclassified D","Unclassified C","Unclassified F"))
+
+# Stats on length differences between intact and incomplete prophages
 
 group_by(intvincl_related, Taxonomic_identity, Completeness) %>%
   summarise(
@@ -204,6 +214,8 @@ FigS3A/FigS3B + plot_layout(guides="collect")
 
 # Figure 2
 
+# Generate a heatmap of prophage mash distances with Euclidean distance clustering
+
 mash_matrix <- read.csv("Intact_prophage_validated_mashmatrix.csv")
 rownames(mash_matrix) <- mash_matrix[, 1];
 mash_matrix2 <- mash_matrix[, -1];
@@ -212,6 +224,7 @@ mash_matrix3 <- as.matrix(mash_matrix2)
 mash_heatmap <- pheatmap(mash_matrix3, show_rownames = TRUE, show_colnames = FALSE)
 mash_heatmap
 
+# Re-order very small clusters to improve visibility and re-plot
 heatmap_labels <- data.frame(rownames(mash_matrix3[mash_heatmap$tree_row[["order"]],]))
 write.csv(heatmap_labels,'Intact_mash_Heatmap_order.csv')
 
@@ -220,8 +233,6 @@ mash_matrix_reordered2 <- mash_matrix_reordered[, -1];
 row.names(mash_matrix_reordered2) <- mash_matrix_reordered$X
 mash_matrix_reordered3 <- as.matrix(mash_matrix_reordered2)
 mash_matrix_reordered3_melted <- melt(mash_matrix_reordered3)
-
-head(mash_matrix_reordered3_melted)
 
 ggplot(data = mash_matrix_reordered3_melted, aes(x=Var2, y=Var1, fill=value)) + 
   geom_tile()+ 
@@ -234,7 +245,7 @@ ggplot(data = mash_matrix_reordered3_melted, aes(x=Var2, y=Var1, fill=value)) +
 
 ### Figure 3
 
-# Mash tree
+# Make Mash tree and highlight clades based on their taxonomic family labels
 prophage_mash_tree <- read.tree("Intact_prophages_validated_mashtree.dnd")
 rooted_prophage_mash_tree <- root(prophage_mash_tree, which(tree$tip.label == "Burkholderia_KS10"))
 
@@ -245,17 +256,16 @@ rooted_prophage_mash_tree_fig_familylabel <- ggtree(rooted_prophage_mash_tree,la
   geom_balance(node=467, fill="#009E73", color=NA,alpha=.2,extendto=1.1)+
   theme(panel.border = element_rect(colour = "black", fill=NA))
 
-rooted_prophage_mash_tree_fig_familylabel
-
 tip_labs <- get_taxa_name(rooted_prophage_mash_tree_fig_familylabel)
 write.csv(tip_labs,"Mashtree_tiplabel.csv")
 
+# Invert and rotate Mash tree so it is horizontal for figure
 rooted_prophage_mash_tree_fig_familylabel_rev <- rooted_prophage_mash_tree_fig_familylabel + coord_flip()
-
 rooted_prophage_mash_tree_fig_familylabel_rev_inverted <- rooted_prophage_mash_tree_fig_familylabel_rev + scale_x_reverse()
 
-# Gene presence/absence and GC/length plot
+# Make gene presence/absence and GC + length plots
 
+# Gene presence/absence matrix plot
 gene_presence_matrix <- read.csv("Intact_prophage_genepresenceabsence.csv",fileEncoding="UTF-8-BOM")
 gene_presence_matrix2 <- gene_presence_matrix[, -1];
 row.names(gene_presence_matrix2) <- gene_presence_matrix$Prophage
@@ -277,7 +287,7 @@ gene_presence_matrix_fig <- ggplot(data = tmp, aes(x=Var2, y=Var1, fill=PA)) +
   labs(fill="Gene presence")+
   coord_flip()
 
-
+# GC and length plots
 lengthGC <- read.csv("Intact_prophage_lengthGC.csv",fileEncoding="UTF-8-BOM")
 lengthGC$Prophage <- factor(lengthGC$Prophage, as.character(lengthGC$Prophage))
 
@@ -326,6 +336,7 @@ ggplot(data=phylotype_prophage_number_long, aes(x = Phylotype, y= Proph_freq,fil
   theme(legend.title = element_text(colour="black", size=12,face="bold"),legend.text = element_text(size=12)) + 
   labs(fill="Completeness")                                                                                                                                                                                                                                                                                                                                                                                
 
+# Stats for Figure S4
 intact_prophages <- phylotype_prophage_number_long[which(phylotype_prophage_number_long$Proph_completeness=='Intact'),]
 
 hist(intact_prophages[which(intact_prophages$Phylotype=='I'),]$Proph_freq)
@@ -360,7 +371,6 @@ colours <- data.frame(tip_colours$Colour)
 prophage_mash_tree_refs_labelled <- ggtree(prophage_mash_tree_refs_rooted,layout = "rectangular")+ ylab("Prophage Mash distance tree")+theme(axis.title=element_text(size=12,face="bold"))+ geom_tiplab(aes(
   subset=(grepl('Ralstonia',label,fixed=TRUE)==TRUE)),colour=colours$tip_colours.Colour, size = 4)+ ggplot2::xlim(0, 2)#geom_tiplab(colour=colours$tip_colours.Colour, size = 5) + ggplot2::xlim(0, 2)
 
-
 tip_labs <- get_taxa_name(prophage_mash_tree_refs_labelled)
 write.csv(tip_labs,"Mashtree_refs__tiplabel.csv")
 
@@ -394,6 +404,7 @@ world_map + geom_scatterpie(aes(x=?..long,y=lat,group=region,r=15),data=pie_char
   theme(legend.justification = "top") +
   theme(legend.text.align = 0)
 
+
 # Fig. S6
 
 prophage_continent_prophage_proportion <- read.csv("Continent_distributions_prophages.csv",fileEncoding="UTF-8-BOM")
@@ -418,6 +429,8 @@ ggplot(data=prophage_continent_prophage_proportion_gathered, aes(x=Prophage,y=Pr
 
 # Figure 5A
 
+# Make RSSC phylogeny plot
+
 rssc_tree <- read.tree("core_tree.treefile")
 rssc_tree_rooted <- midpoint.root(rssc_tree)
 tip_labs <- rssc_tree_rooted$tip.label
@@ -433,13 +446,8 @@ rssc_tree_rooted_dropped_fig_collapsed <- rssc_tree_rooted_dropped_fig %>%
   collapse(node=201,"max")%>%
   collapse(node=265,"max")
 
-rssc_tree_rooted_dropped_fig_collapsed_highlighted <- rssc_tree_rooted_dropped_fig_collapsed %>%
-  + geom_hilight(node=268, fill="steelblue", alpha=.3, extend=1) +
-  geom_hilight(node=363, fill="darkgreen", alpha=.3, extend=1)+
-  geom_hilight(node=203, fill="yellow", alpha=.3, extend=1)+
-  geom_hilight(node=196, fill="red", alpha=.3, extend=1)+
-  geom_hilight(node=258, fill="orange", alpha=.3, extend=1)
 
+# Make prophage presence/absence matrix
 
 prophage_presence_matrix <- read.csv("R_pickettii_tree_presence_absence_matrix_validated_intact_prophages.csv",fileEncoding="UTF-8-BOM")
 prophage_presence_matrix2 <- prophage_presence_matrix[, -1];
@@ -464,11 +472,12 @@ prophage_presence_fig <- ggplot(data = melted_matrix, aes(x=Var2, y=Var1, fill=v
   theme(axis.title=element_text(size=12,face="bold")) +
   theme(legend.justification = "top")
 
-
-rssc_tree_rooted_dropped_fig_collapsed_highlighted + prophage_presence_fig + plot_layout(widths = c(0.4, 1))+plot_layout(guides="collect")
+rssc_tree_rooted_dropped_fig_collapsed + prophage_presence_fig + plot_layout(widths = c(0.4, 1))+plot_layout(guides="collect")
 
 
 #Figure S7
+
+# Make RSSC phylogeny
 
 rssc_tree <- read.tree("core_tree.treefile")
 rssc_tree_rooted <- midpoint.root(rssc_tree)
@@ -481,12 +490,12 @@ rssc_tree_rooted_dropped_fig <- ggtree(rooted.tree_reduced,layout = "rectangular
   theme(plot.margin=margin(0,0,0,0)) + ylab("RSSC phylogeny")+
   theme(axis.title=element_text(size=12,face="bold"))
 
+# Make incomplete prophage presence/absence plot
 incomplete_prophage_presence_matrix <- read.csv("R_pickettii_tree_presence_absence_matrix_incomplete_prophages.csv",fileEncoding="UTF-8-BOM")
 incomplete_prophage_presence_matrix2 <- incomplete_prophage_presence_matrix[, -1];
 row.names(incomplete_prophage_presence_matrix2) <- incomplete_prophage_presence_matrix$Isolate
 incomplete_prophage_presence_matrix3 <- as.matrix(incomplete_prophage_presence_matrix2)
 incomplete_prophage_presence_matrix3 <- melt(incomplete_prophage_presence_matrix3)
-
 
 incomplete_prophage_presence_fig <- ggplot(data = incomplete_prophage_presence_matrix3, aes(x=Var2, y=Var1, fill=value)) + 
   geom_tile()+ 
@@ -502,7 +511,6 @@ incomplete_prophage_presence_fig <- ggplot(data = incomplete_prophage_presence_m
                    labels=c(expression(paste(phi," RS551")),expression(paste(phi," PE226")),expression(paste(phi," RSM3")),expression(paste(phi," RSS1")),expression(paste(phi," RSS30")),expression(paste(phi," RSS-TH1")), "Unclassified B",expression(paste(phi," RSA1")),expression(paste(phi," RsoM1USA")),expression(paste(phi," RSY1")),"Unclassified D",expression(paste(phi," RS138")),"Unclassified G",expression(paste(phi," Dina")),"Unclassified C","Unclassified H","Unclassified A","Unclassified F","Unclassified I","Unclassified J"))+
   theme(axis.title=element_text(size=12,face="bold")) +
   theme(legend.justification = "top")
-
 
 rssc_tree_rooted_dropped_fig + incomplete_prophage_presence_fig + plot_layout(widths = c(0.4, 1),guides="collect")
 
@@ -557,6 +565,7 @@ FigS9B <- ggplot(data=BC_and_mash, aes(x = Phylotype, y= Mash))  + geom_violin(a
 
 FigS9A + FigS9B
 
+# Stats for Figure S9
 kruskal.test(BC_and_mash$Mash~BC_and_mash$Phylotype)
 dunnTest(BC_and_mash$Mash~BC_and_mash$Phylotype)
 kruskalmc(BC_and_mash$Mash~BC_and_mash$Phylotype,probs=0.05)
@@ -566,9 +575,11 @@ dunnTest(BC_and_mash$BC~BC_and_mash$Phylotype)
 kruskalmc(BC_and_mash$BC~BC_and_mash$Phylotype,probs=0.05)
 
 
-# Figure 5B
+## Figure 5B
 
 # Make Bray-Curtis distance matrices
+
+#Phylotype I
 phyloI_presence_matrix <- read.csv("PhyloI_presenceabsence.csv",fileEncoding="UTF-8-BOM")
 rownames(phyloI_presence_matrix) <- phyloI_presence_matrix[, 1];
 phyloI_presence_matrix2 <- phyloI_presence_matrix[, -1];
@@ -579,7 +590,7 @@ phyloI_bc[is.na(phyloI_bc)] <- 0
 phyloI_bc_matrix <- as.matrix(phyloI_bc)
 write.csv(phyloI_bc_matrix, "PhyloI_BCmatrix.csv")
 
-
+# Phylotype IIA
 phyloIIA_presence_matrix <- read.csv("PhyloIIA_presenceabsence.csv")
 rownames(phyloIIA_presence_matrix) <- phyloIIA_presence_matrix[, 1];
 phyloIIA_presence_matrix2 <- phyloIIA_presence_matrix[, -1];
@@ -590,7 +601,7 @@ phyloIIA_bc[is.na(phyloIIA_bc)] <- 0
 phyloIIA_bc_matrix <- as.matrix(phyloIIA_bc)
 write.csv(PhyloIIA_BC, "PhyloIIA_BCmatrix.csv")
 
-
+# Phylotype IIB
 phyloIIB_presence_matrix <- read.csv("PhyloIIB_presenceabsence.csv")
 rownames(phyloIIB_presence_matrix) <- phyloIIB_presence_matrix[, 1];
 phyloIIB_presence_matrix2 <- phyloIIB_presence_matrix[, -1];
@@ -600,7 +611,6 @@ phyloIIB_bc <- vegdist(phyloIIB_presence_matrix3, method="bray")
 phyloIIB_bc[is.na(phyloIIB_bc)] <- 0
 phyloIIB_bc_matrix <- as.matrix(phyloIIB_bc)
 write.csv(PhyloIIB_BC, "PhyloIIB_BCmatrix.csv")
-
 
 # Take averages of each row and add to spreadsheet with host mash distances
 bc_mash_regression <- read.csv("Phylotype_BC_mash_regression.csv")
@@ -636,7 +646,7 @@ rssc_tree_rooted <- midpoint.root(rssc_tree)
 
 ## PACo analysis of phylotype I clade
 
-# Extract phylotype I clade
+# Extract phylotype I clade and generate Bray-Curtis UPGMA tree
 rssc_tree_rooted_phyloI <- extract.clade(rssc_tree_rooted,209)
 rssc_tree_rooted_phyloI_drop <- drop.tip(rssc_tree_rooted_phyloI,"GMI1000")
 
@@ -651,7 +661,7 @@ phyloI_bc_matrix <- as.matrix(phyloI_bc)
 
 phyloI_UPGMA <- upgma(phyloI_bc_matrix)
 
-# Start running PACo
+# Run PACo using phylotype I phylogeny and BC UPGMA tree
 host.D <- cophenetic(rssc_tree_rooted_phyloI_drop)
 BC.D <- cophenetic(phyloI_UPGMA)
 
@@ -671,7 +681,7 @@ res <- residuals_paco(D$proc)
 D$gof
 
 
-## PACo analysis of phylotype IIA clade
+# Extract phylotype IIA clade and generate Bray-Curtis UPGMA tree
 rssc_tree_rooted_phyloIIA <- extract.clade(rssc_tree_rooted,372)
 rssc_tree_rooted_phyloIIA_drop <- drop.tip(rssc_tree_rooted_phyloIIA,"K60")
 
@@ -686,7 +696,7 @@ phyloIIA_bc_matrix <- as.matrix(phyloIIA_bc)
 
 phyloIIA_UPGMA <- upgma(phyloIIA_bc_matrix)
 
-# Start running PACo
+# Run PACo using phylotype IIA phylogeny and BC UPGMA tree
 host.D <- cophenetic(rssc_tree_rooted_phyloIIA_drop)
 BC.D <- cophenetic(phyloIIA_UPGMA)
 
@@ -705,8 +715,7 @@ D <- paco_links(D)
 res <- residuals_paco(D$proc)
 D$gof
 
-## PACo analysis of phylotype IIB clade
-
+# Extract phylotype IIB clade and generate Bray-Curtis UPGMA tree
 rssc_tree_rooted_phyloIIB <- extract.clade(rssc_tree_rooted,276)
 rssc_tree_rooted_phyloIIB_drop <- drop.tip(rssc_tree_rooted_phyloIIB,"UY031")
 
@@ -721,7 +730,7 @@ phyloIIB_bc_matrix <- as.matrix(phyloIIB_bc)
 
 phyloIIB_UPGMA <- upgma(phyloIIB_bc_matrix)
 
-# Start running PACo
+# Run PACo using phylotype IIB phylogeny and BC UPGMA tree
 host.D <- cophenetic(rooted.tree.phyloIIB.drop)
 BC.D <- cophenetic(PhyloIIB_UPGMA)
 
@@ -741,12 +750,10 @@ res <- residuals_paco(D$proc)
 D$gof
 
 
-#PACo analysis of all isolates together
-
+# Generate whole RSSC phylogeny and all isolate Bray-Curtis UPGMA tree
 tip <- c("K60","GMI1000","UY031","CMR15","PSI07")
 rssc_tree_rooted_dropped <- drop.tip(rssc_tree_rooted,tip)
 
-# Use presence/absence matrix with reference isolates removed
 all_presence_matrix <- read.csv("R_pickettii_tree_presence_absence_matrix_forcongruence.csv")
 rownames(all_presence_matrix) <- all_presence_matrix[, 1];
 all_presence_matrix2 <- all_presence_matrix[, -1];
@@ -758,7 +765,7 @@ all_bc_matrix <- as.matrix(all_bc)
 
 all_bc_UPGMA <- upgma(all_bc_matrix)
 
-# Start running PACo
+# Run PACo using whole phylogeny and BC UPGMA tree
 host.D <- cophenetic(rssc_tree_rooted_dropped)
 BC.D <- cophenetic(all_bc_UPGMA)
 
@@ -779,7 +786,7 @@ D$gof
 
 assoc <- data.frame(pol=rownames(HP2)[which(HP2==1, arr.ind=TRUE)[,'row']], pla=colnames(HP2)[which(HP2==1, arr.ind=TRUE)[,'col']])
 
-# Tanglegram
+# All isolate phylogeny and BC UPGMA tree Tanglegram
 rssc_tree_rooted_dropped2 <- rotateNodes(rssc_tree_rooted_dropped,"all")
 rssc_tree_rooted_dropped3 <- untangle(rssc_tree_rooted_dropped2)
 
@@ -787,11 +794,9 @@ cophyloplot(rooted.tree.drop3, AllBC_UPGMA, assoc, show.tip.label=FALSE, use.edg
                          lwd=1, col='steelblue', length.line=0, gap=0, space=70,rotate=TRUE)+coord_flip()
 
 
-
-
 # Figure 6
 
-# VIGA results
+# VIGA stacked bar plot
 VIGA <- read.csv("VIGA_proportion_table.csv",fileEncoding="UTF-8-BOM")
 VIGA_long <- gather(VIGA, Annotation_hit, Annotation_freq, DNA.replication:Other, factor_key=TRUE)
 
@@ -822,7 +827,7 @@ ggplot(data=VIGA_long, aes(x=Prophage,y=Annotation_freq,fill=Annotation_hit)) +
   theme(plot.margin=margin(20,0,0,0))
 
 
-# CAZy results
+# CAZy tile plot
 matrix_cazy <- read.csv("CAZy_heatmap.csv",fileEncoding="UTF-8-BOM")
 matrix2 <- matrix_cazy[, -1];
 row.names(matrix2) <- matrix_cazy$Genes
@@ -844,7 +849,7 @@ CAZy <- ggplot(data = melted_matrix_cazy, aes(x=Var2, y=Var1, fill=value)) +
   coord_fixed()
 
 
-# RalstoT3E results
+# RalstoT3E tile plot
 matrix_ralsto <- read.csv("Ralsto_T3E_heatmap.csv",fileEncoding="UTF-8-BOM")
 matrix2 <- matrix_ralsto[, -1];
 row.names(matrix2) <- matrix_ralsto$Genes
@@ -864,7 +869,7 @@ RalstoT3E <- ggplot(data = melted_matrix_ralsto, aes(x=Var2, y=Var1, fill=value)
   theme(legend.justification = "top")+
   coord_fixed()
 
-# PHI-base results
+# PHI-base tile plot
 matrix_phi <- read.csv("PHI_base_heatmap.csv",fileEncoding="UTF-8-BOM")
 matrix2 <- matrix_phi[, -1];
 row.names(matrix2) <- matrix_phi$Genes
