@@ -1,8 +1,7 @@
 #### Prophage MS figure and stats R script ####
 
 # The paper this R code was written for can be accessed at: 
-# Greenrod STE, Stoycheva M, Elphinstone J, Friman VP. 2021. Global diversity and distribution of prophages are lineage-specific within the Ralstonia solanacearum plant pathogenic bacterium species complex. bioRxiv. DOI: 10.1101/2021.10.20.465097
-
+# Greenrod, S.T.E., Stoycheva, M., Elphinstone, J. et al. Global diversity and distribution of prophages are lineage-specific within the Ralstonia solanacearum species complex. BMC Genomics 23, 689 (2022). https://doi.org/10.1186/s12864-022-08909-7
 
 ### Dependencies ###
 
