@@ -1,0 +1,13 @@
+﻿Genes,Ralstonia phage Rs551,Ralstonia phage RSM3,Unclassified B,Ralstonia phage RSS1,Ralstonia phage RSS30,Ralstonia phage RSS-TH1,Ralstonia phage PE226,Ralstonia phage phiRSA1,Ralstonia phage RsoM1USA,Ralstonia phage RSY1,Unclassified D,Ralstonia phage RS138,Unclassified G,Ralstonia phage Dina,Unclassified C,Unclassified H,Unclassified A,Unclassified F,Unclassified I,Unclassified J
+AldB_(PSPTO_2673),0,0.333333333,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+EadM,0,0,0,0,0,0,0,0.48,1,0.666666667,0.285714286,0,0,0,0,0,0,0,0,0
+EntA_(VK055_1922),0,0.333333333,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+hupB_(XAC1081),0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,0,0,1
+lolA,0,0.666666667,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+lpxO,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0.5,0,0
+msh2,0,0,0,0,0,0,0,0.12,0,0.333333333,0,0,0,0,0,0,0,0,0,0
+PD0928,0,0,0,1,0.75,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+rarA,0.962025316,0.833333333,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+T6SS1,0,0,0,0,0,0,0,0,0,0,0.571428571,0,0,0,0,0,0,0,0,0
+Trr1,0,0.5,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+vgrG-1,0,0,0,0,0,0,0,0,0,0.666666667,0.571428571,0,0,0,0,0,0,0,0,0

@@ -1,0 +1,7 @@
+﻿long,lat,Continent,region,Text,sizescale,RS551,RSM3,RSS1,RSS30,PE226,RSA1,RsoM1USA,RSY1,Unclassified D,RS138,Dina,Unclassified C,Unclassified A,Unclassified F
+-10,-40,Africa,1,87,9.2,27,0,0,0,0,11,0,0,0,0,11,7,30,1
+180,25,Asia,2,63,6.8,9,2,2,1,2,5,1,1,1,1,11,3,13,5
+-30,45,Europe,3,89,8.9,37,3,0,0,0,3,0,0,0,0,3,0,41,0
+80,-40,Oceania,4,15,1.5,2,0,0,1,1,3,0,1,0,0,5,0,2,0
+-165,0,North America,5,28,2.9,1,0,2,1,0,2,5,1,5,0,4,4,1,0
+-120,-40,South America,6,26,4.3,3,1,0,1,0,1,2,0,1,2,8,3,4,0
