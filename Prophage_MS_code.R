@@ -43,15 +43,16 @@ library("ggvenn")
 library("pheatmap")
 library("Polychrome")
 library("ggtext")
+library("colorBlindness")
 
 ### Code for analysis ###
 
 ## Figure S2
 
 prophage_mash_tree <- read.tree("Intact_prophages_validated_mashtree.dnd")
-rooted_prophage_mash_tree <- root(prophage_mash_tree, which(tree$tip.label == "Burkholderia_KS10"))
+rooted_prophage_mash_tree <- root(prophage_mash_tree, outgroup = "Burkholderia_KS10")
 
-rooted_prophage_mash_tree_figure <- ggtree(rooted.tree,layout = "rectangular")+ theme(plot.margin=margin(0,0,0,10))+ ylab("Prophage Mash distance tree")+
+rooted_prophage_mash_tree_figure <- ggtree(rooted_prophage_mash_tree,layout = "rectangular")+ theme(plot.margin=margin(0,0,0,10))+ ylab("Prophage Mash distance tree")+
   theme(axis.title=element_text(size=12,face="bold"))
 
 tip_labs <- get_taxa_name(rooted_prophage_mash_tree_figure)
@@ -88,11 +89,13 @@ rooted_prophage_mash_tree_figure + cornerstone_prophage_genes_fig + plot_layout(
 intvincl_general <- read.csv("Intact_v_incomplete.csv", header=TRUE,fileEncoding="UTF-8-BOM")
 intvincl_general$Completeness <- factor(intvincl_general$Completeness, levels = c("Incomplete","Intact"))
 
-intvincl_general$GC_range <- factor(intvincl_general$GC_range, levels = c("52_to_57","57_to_59","59_to_61","61_to_63","63_to_65","65_to_67","67_to_69","More_than_69"))
+intvincl_general$GC_range <- factor(intvincl_general$GC_range, levels = c("55-58","58-60","60-62","62-64","64-66","66-68","68-70"))
 
 # GC distruibution figure
 
-Fig1A <- ggplot(data=intvincl_general, aes(x = GC_range, y= frequency(GC_range))) + 
+#Fig 1A
+
+ggplot(data=intvincl_general, aes(x = GC_range, y= frequency(GC_range))) + 
   geom_bar(aes(fill=Completeness),stat='identity')+
   coord_cartesian(ylim = c(0, 270))+ 
   theme_bw()+ 
@@ -106,10 +109,12 @@ Fig1A <- ggplot(data=intvincl_general, aes(x = GC_range, y= frequency(GC_range))
   theme(legend.position = c(0.17, 0.87))+
   theme(legend.title = element_text(colour="black", size=12,face="bold"),legend.text = element_text(size=12))
 
-intvincl_general$Length_range <- factor(intvincl_general$Length_range, levels = c("3-5","5-15","15-25","25-35","35-45","45-55","More-55"))
+intvincl_general$Length_range <- factor(intvincl_general$Length_range, levels = c("3-5","5-15","15-25","25-35","35-45","45-55","55-65"))
 
 # Length distribution figure
-Fig1B <- ggplot(data=intvincl_general, aes(x = Length_range, y= frequency(Length_range))) +
+#Fig 1B
+
+ggplot(data=intvincl_general, aes(x = Length_range, y= frequency(Length_range))) +
   geom_bar(aes(fill=Completeness),stat='identity')+
   coord_cartesian(ylim = c(0, 270))+
   theme_bw()+
@@ -386,13 +391,13 @@ world_map <- ggplot(world, aes(long, lat)) +
   theme(axis.text.x = element_text(size = 10, color = "black")) + 
   theme(axis.title = element_text( face="bold", size=14))+theme(legend.title = element_text(color="black",size=12,face="bold"))+theme(legend.text = element_text(size=12))+labs(fill="Prophage")
 
-pie_charts <- read.csv("scatterpie_continent_moved2.csv")
+pie_charts <- read.csv("scatterpie_continent_moved2.csv",fileEncoding="UTF-8-BOM")
 
 colours <- paletteMartin
 newcolours <- colours[-c(1,12)]
 names(newcolours) <- NULL   
 
-world_map + geom_scatterpie(aes(x=?..long,y=lat,group=region,r=15),data=pie_charts,cols=c("RS551","PE226","RSM3","RSS1","RSS30","RSA1","RsoM1USA","RSY1","RS138","Dina","Unclassified.C","Unclassified.A","Unclassified.F"),alpha=.8)+ 
+world_map + geom_scatterpie(aes(x=long,y=lat,group=region,r=15),data=pie_charts,cols=c("RS551","PE226","RSM3","RSS1","RSS30","RSA1","RsoM1USA","RSY1","RS138","Dina","Unclassified.C","Unclassified.A","Unclassified.F"),alpha=.8)+ 
   scale_fill_manual(values = newcolours,labels=c(expression(paste(phi," RS551")),expression(paste(phi," PE226")),expression(paste(phi," RSM3")),expression(paste(phi," RSS1")),expression(paste(phi," RSS30")),expression(paste(phi," RSA1")),expression(paste(phi," RsoM1USA")),expression(paste(phi," RSY1")),expression(paste(phi," RS138")),expression(paste(phi," Dina")),"Unclassified C","Unclassified A","Unclassified F"))+ 
   annotate(geom="text", x=-10, y=-60, label="(87)",color="black",fontface="bold")+ 
   annotate(geom="text", x=180, y=5, label="(63)",color="black",fontface="bold")+ 
@@ -438,13 +443,13 @@ tip_labs <- rssc_tree_rooted$tip.label
 to_drop <- c("UY031","K60","GMI1000","CMR15","PSI07")
 rssc_tree_rooted_dropped <- drop.tip(rssc_tree_rooted,to_drop)
 
-rssc_tree_rooted_dropped_fig <- ggtree(rooted.tree_reduced,layout = "rectangular",ladderize=TRUE)+ 
+rssc_tree_rooted_dropped_fig <- ggtree(rssc_tree_rooted_dropped,layout = "rectangular",ladderize=TRUE)+ 
   theme(plot.margin=margin(0,0,0,0)) + ylab("RSSC phylogeny")+
   theme(axis.title=element_text(size=12,face="bold"))
 
 rssc_tree_rooted_dropped_fig_collapsed <- rssc_tree_rooted_dropped_fig %>%
-  collapse(node=201,"max")%>%
-  collapse(node=265,"max")
+  ggtree::collapse(node=201,"max") %>%
+  ggtree::collapse(node=265,"max")
 
 
 # Make prophage presence/absence matrix
@@ -457,7 +462,7 @@ prophage_presence_matrix3_melted <- melt(prophage_presence_matrix3)
 
 prophage_presence_matrix3_melted$value <- as.factor(prophage_presence_matrix3_melted$value)
 
-prophage_presence_fig <- ggplot(data = melted_matrix, aes(x=Var2, y=Var1, fill=value)) + 
+prophage_presence_fig <- ggplot(data = prophage_presence_matrix3_melted, aes(x=Var2, y=Var1, fill=value)) + 
   geom_tile()+ 
   scale_y_discrete(limits = rev)+
   theme(axis.text.y=element_blank(),axis.title.y=element_blank(),axis.ticks.y=element_blank(),legend.spacing.y=unit(0.5,"cm"))+
@@ -486,7 +491,7 @@ tip_labs <- rssc_tree_rooted$tip.label
 to_drop <- c("UY031","K60","GMI1000","CMR15","PSI07")
 rssc_tree_rooted_dropped <- drop.tip(rssc_tree_rooted,to_drop)
 
-rssc_tree_rooted_dropped_fig <- ggtree(rooted.tree_reduced,layout = "rectangular",ladderize=TRUE)+ 
+rssc_tree_rooted_dropped_fig <- ggtree(rssc_tree_rooted_dropped,layout = "rectangular",ladderize=TRUE)+ 
   theme(plot.margin=margin(0,0,0,0)) + ylab("RSSC phylogeny")+
   theme(axis.title=element_text(size=12,face="bold"))
 
@@ -496,6 +501,8 @@ incomplete_prophage_presence_matrix2 <- incomplete_prophage_presence_matrix[, -1
 row.names(incomplete_prophage_presence_matrix2) <- incomplete_prophage_presence_matrix$Isolate
 incomplete_prophage_presence_matrix3 <- as.matrix(incomplete_prophage_presence_matrix2)
 incomplete_prophage_presence_matrix3 <- melt(incomplete_prophage_presence_matrix3)
+
+incomplete_prophage_presence_matrix3$value <- as.factor(incomplete_prophage_presence_matrix3$value)
 
 incomplete_prophage_presence_fig <- ggplot(data = incomplete_prophage_presence_matrix3, aes(x=Var2, y=Var1, fill=value)) + 
   geom_tile()+ 
@@ -832,9 +839,7 @@ matrix_cazy <- read.csv("CAZy_heatmap.csv",fileEncoding="UTF-8-BOM")
 matrix2 <- matrix_cazy[, -1];
 row.names(matrix2) <- matrix_cazy$Genes
 matrix3 <- as.matrix(matrix2)
-head(matrix3)
 melted_matrix_cazy <- melt(matrix3)
-head(melted_matrix)
 
 CAZy <- ggplot(data = melted_matrix_cazy, aes(x=Var2, y=Var1, fill=value)) + 
   geom_tile(colour="black")+ 
@@ -854,9 +859,7 @@ matrix_ralsto <- read.csv("Ralsto_T3E_heatmap.csv",fileEncoding="UTF-8-BOM")
 matrix2 <- matrix_ralsto[, -1];
 row.names(matrix2) <- matrix_ralsto$Genes
 matrix3 <- as.matrix(matrix2)
-head(matrix3)
 melted_matrix_ralsto <- melt(matrix3)
-head(melted_matrix)
 
 RalstoT3E <- ggplot(data = melted_matrix_ralsto, aes(x=Var2, y=Var1, fill=value)) + 
   geom_tile(colour="black")+ 
@@ -874,9 +877,7 @@ matrix_phi <- read.csv("PHI_base_heatmap.csv",fileEncoding="UTF-8-BOM")
 matrix2 <- matrix_phi[, -1];
 row.names(matrix2) <- matrix_phi$Genes
 matrix3 <- as.matrix(matrix2)
-head(matrix3)
 melted_matrix_phi <- melt(matrix3)
-head(melted_matrix_phi)
 
 Phi_base <- ggplot(data = melted_matrix_phi, aes(x=Var2, y=Var1, fill=value)) + 
   geom_tile(colour="black")+ 
